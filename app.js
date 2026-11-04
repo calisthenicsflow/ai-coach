@@ -173,7 +173,7 @@ function setupSvg(ex) {
   <path d="${FIG[ex]}" stroke="#F4F4EE" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
   <circle cx="${hx}" cy="${hy}" r="7" fill="#F4F4EE"/>
   <path d="M48 136 L160 136 M48 136 l6 -3 M48 136 l6 3 M160 136 l-6 -3 M160 136 l-6 3" stroke="rgba(244,244,238,.5)" stroke-width="1.5"/>
-  <text x="104" y="133" text-anchor="middle" fill="rgba(244,244,238,.7)" font-size="10" font-family="Manrope">${SETUP[ex][2]} m</text>
+  <text x="104" y="133" text-anchor="middle" fill="rgba(244,244,238,.7)" font-size="10" font-family="Manrope">${cfg.lang === "ru" ? SETUP[ex][2] + " м" : SETUP[ex][2].replace(",", ".") + " m"}</text>
 </svg>`;
 }
 function showTip(ex) {
@@ -181,7 +181,7 @@ function showTip(ex) {
   $('tipBody').innerHTML = setupSvg(ex) + `<ul class="tiplist">
     <li><small>${L.tView}</small><b>${view === 'side' ? L.vSide : L.vFront}</b></li>
     <li><small>${L.tHeight}</small><b>${L['h' + h[0].toUpperCase() + h.slice(1)]}</b></li>
-    <li><small>${L.tDist}</small><b>${d} ${cfg.lang === 'ru' ? 'м' : 'm'}</b></li>
+    <li><small>${L.tDist}</small><b>${cfg.lang === 'ru' ? d + ' м' : d.replace(',', '.') + ' m'}</b></li>
     <li><small>✓</small><b>${L.tFrame}</b></li></ul><p class="tipnote">${L.tipNote[view]}</p>`;
   $('tipTitle').textContent = `${L.ex[ex][0]} · ${L.tipTitle}`; $('tipGo').textContent = L.gotIt;
   $('tip').classList.add('show');
@@ -279,7 +279,7 @@ function showView(r) {
   if (!r.view) return; const key = r.view + '|' + (r.checks || []).join(',') + '|' + cfg.lang;
   if (key === W.checksKey) return; W.checksKey = key; const L = t(); const best = BEST_VIEW[W.ex];
   const cks = (r.checks || []).map(c => L.ck[c] || c);
-  $('viewChip').innerHTML = `<b>${L.views[r.view]}</b>${r.view !== best && !(best === 'front' && r.view !== 'front') ? ` <em>${L.better}: ${L.views[best]}</em>` : ''}<br><span>✓ ${[L.checksAll, ...cks].join(' · ')}</span>`;
+  $('viewChip').innerHTML = `<b>${L.views[r.view]}</b>${r.view !== best && !(best === 'front' && r.view !== 'front') ? ` <em>${L.better}: ${L.views[best]}</em>` : ''}<br><span>✓ ${[...(EXERCISES[W.ex].kind === 'hold' ? [] : [L.checksAll]), ...cks].join(' · ')}</span>`;
   $('viewChip').className = 'vchip show' + (r.view !== best && best === 'side' ? ' warn' : '');
 }
 
