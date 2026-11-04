@@ -84,3 +84,8 @@ h1{font:900 44px/1 Montserrat;margin:34px 0 10px;letter-spacing:-.01em}
 .row2{display:flex;gap:10px;margin-top:24px;align-items:center}
 .row2 .cta.sm{flex:1;margin:0;padding:15px}
 .row2 .chip{padding:15px 18px}
+
+.dbg{position:absolute;left:10px;right:10px;bottom:120px;z-index:6;margin:0;font:600 12px/1.45 ui-monospace,Menlo,monospace;color:#d8ff3c;background:rgba(6,7,6,.72);padding:8px 10px;border-radius:10px;white-space:pre-wrap;pointer-events:none;display:none}
+.dbg:not(:empty){display:block}
+.verline{margin:16px 0 0;font:600 12px Manrope,sans-serif;color:rgba(244,244,238,.5);letter-spacing:.06em}
+.ver{color:rgba(216,255,60,.7)}

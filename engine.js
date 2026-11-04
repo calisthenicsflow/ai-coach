@@ -23,10 +23,11 @@ export const EXERCISES = {
   pullup:  { kind:'reps', primary:'elbow', top:145, start:130, depth:90,  inverted:true, need:['s','e','w'], lowCue:'chin_over', lockCue:'full_hang' },
   plank:   { kind:'hold', need:['s','e','h','a'] },
   hollow:  { kind:'hold', need:['s','h','a'] },
+  handstand:{ kind:'hold', need:['s','e','w','h','a'] },
 };
 // every named fault blocks the rep / hold second. Priority = order (first shown).
 export const FAULTS = ['hips_sag','hips_high','shoulders_over_elbows','shoulders_over_wrists','no_kipping','no_swing','knees_out','chest_up','elbows_in','hands_under',
-  'legs_up','legs_lower','shoulders_up','go_lower','deeper','dip_lower','chin_over','lockout','full_hang','stand_tall'];
+  'legs_up','legs_lower','shoulders_up','straight_arms','open_shoulders','no_banana','hs_line','go_lower','deeper','dip_lower','chin_over','lockout','full_hang','stand_tall'];
 
 const PART = { s:['ls','rs'], e:['le','re'], w:['lw','rw'], h:['lh','rh'], k:['lk','rk'], a:['la','ra'] };
 
@@ -35,6 +36,9 @@ export function visibility(lm) { // which body groups are visible (either side)
   for (const k in PART) out[k] = PART[k].some(n => lm[L[n]] && (lm[L[n]][3] ?? 1) > 0.5);
   return out;
 }
+
+// plank: real clean side-view planks read offT ~+0.04 and armV ~+4 deg (MediaPipe bias), so limits are centred there
+export const LIM = { offC:0.04, off:0.12, armC:4, arm:10, pbody:164, hsElb:155, hsSh:155, hsHip:163, hsLean:8, hands:0.42, kipPull:140, kipDip:115, chest:45 };
 
 export function createEngine(exId, { aspect = 9/16 } = {}) {
   const ex = EXERCISES[exId]; const ar = aspect; // ar = width/height of frame
@@ -103,17 +107,17 @@ export function createEngine(exId, { aspect = 9/16 } = {}) {
     const live = [];
     const working = st.phase !== 'top';
     if (exId === 'pushup') {
-      live.push(...bodyFaults(dt, st.smBody, off, 160, 166));
+      live.push(...bodyFaults(dt, st.smBody, off, LIM.pbody, LIM.pbody+5));
       // hands under shoulders (checked near lockout): horizontal wrist offset vs arm length
       const hw = m('hands', Math.abs(P.W[0]-P.S[0])*ar / dist(P.S, P.W), dt, 0.25);
-      if (a > 140) live.push(flag('hands_under', hw > 0.45, hw > 0.35, dt, 0.6) && 'hands_under');
+      if (a > 140) live.push(flag('hands_under', hw > LIM.hands, hw > LIM.hands-0.08, dt, 0.6) && 'hands_under');
       // elbow flare (side view): at the bottom, upper arm foreshortened and ~perpendicular to torso
       const sh = ang(P.H, P.S, P.E, ar), ratio = dist(P.S, P.E) / dist(P.E, P.W);
       res.dbg = { hw, sh, ratio };
       if (a < 115) live.push(flag('elbows_in', sh > 80 && ratio < 0.55, sh > 72 && ratio < 0.65, dt, 0.25) && 'elbows_in');
     }
     if (exId === 'squat') {
-      live.push(flag('chest_up', working && torso < 40, working && torso < 46, dt, 0.3) && 'chest_up');
+      live.push(flag('chest_up', working && torso < LIM.chest, working && torso < LIM.chest+6, dt, 0.3) && 'chest_up');
       // knee valgus: only measurable from the front (shoulders wide in image)
       const sw = Math.abs(P.S2[0]-P.S3[0])*ar, tl = dist(P.S, P.H);
       const allV = [P.K2,P.K3,P.A2,P.A3].every(p => (p[3] ?? 1) > 0.6);
@@ -126,7 +130,7 @@ export function createEngine(exId, { aspect = 9/16 } = {}) {
     if (exId === 'pullup' || exId === 'dip') {
       if (P.kv) { // knee / leg drive: hip flexion
         const hip = m('hip', ang(P.S, P.H, P.K, ar), dt, 0.1);
-        const lim = exId === 'pullup' ? 130 : 105;
+        const lim = exId === 'pullup' ? LIM.kipPull : LIM.kipDip;
         live.push(flag('no_kipping', hip < lim, hip < lim + 8, dt, 0.2) && 'no_kipping');
         res.dbg = { hip };
       }
@@ -183,13 +187,31 @@ export function createEngine(exId, { aspect = 9/16 } = {}) {
       const straight = elb > 145;
       const sup = straight ? P.W : P.E;
       const dir = Math.sign(P.H[0] - P.S[0]) || 1;               // +1 if hips are to the right of shoulders
-      const fwd = m('fwd', -(P.S[0] - sup[0]) * dir * ar / dist(P.S, sup), dt); // + shoulders past the hands (toward head)
-      const sa = m('sa', ang(P.H, P.S, sup, ar), dt);               // shoulder angle, ~90 ideal
-      res.dbg = { fwd, sa, elb, b };
-      const bad = Math.abs(fwd) > 0.3 || sa < 72 || sa > 108, stay = Math.abs(fwd) > 0.22 || sa < 77 || sa > 103;
+      const tl = dist(P.S, P.H);
+      const dx = -(P.S[0] - sup[0]) * dir * ar;                     // + = shoulders toward the head (past hands)
+      const off_t = m('offT', dx / tl, dt);                         // horizontal offset in torso lengths
+      const armV = m('armV', Math.atan2(dx, Math.abs(sup[1] - P.S[1]) || 1e-6) * 180/Math.PI, dt); // arm vs vertical, deg
+      const sa = m('sa', ang(P.H, P.S, sup, ar), dt);               // shoulder angle (info)
+      res.dbg = { offT: off_t, armV, sa, elb, b };
+      const eo = Math.abs(off_t - LIM.offC), ea = Math.abs(armV - LIM.armC);
+      const bad = eo > LIM.off || ea > LIM.arm, stay = eo > LIM.off*0.7 || ea > LIM.arm*0.7;
       const key = straight ? 'shoulders_over_wrists' : 'shoulders_over_elbows';
       const on = flag('shoulders', bad, stay, dt);
       if (on) live.push(key);
+    } else if (exId === 'handstand') {
+      // inverted: wrists below hips, body near vertical
+      if (!(P.W[1] > P.H[1] && P.H[1] > P.A[1] - 0.02) || tilt(P.W, P.A, ar) < 50) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
+      const vdev = (a, c) => Math.atan2(Math.abs((c[0]-a[0])*ar), Math.abs(c[1]-a[1]) || 1e-6) * 180/Math.PI; // deg from vertical
+      const elb = m('elb', ang(P.S, P.E, P.W, ar), dt, 0.15);
+      const sh  = m('sh',  ang(P.H, P.S, P.E, ar), dt, 0.15);     // open shoulder ~180
+      const hip = m('hip', ang(P.S, P.H, P.A, ar), dt, 0.15);     // banana / pike
+      const lean = m('lean', vdev(P.W, P.A), dt, 0.2);            // whole line vs vertical
+      const segs = m('segs', Math.max(vdev(P.W, P.S), vdev(P.S, P.H), vdev(P.H, P.A)), dt, 0.2);
+      res.dbg = { elb, sh, hip, lean, segs };
+      live.push(flag('straight_arms', elb < LIM.hsElb, elb < LIM.hsElb + 5, dt) && 'straight_arms');
+      live.push(flag('open_shoulders', sh < LIM.hsSh, sh < LIM.hsSh + 5, dt) && 'open_shoulders');
+      live.push(flag('no_banana', hip < LIM.hsHip, hip < LIM.hsHip + 5, dt) && 'no_banana');
+      live.push(flag('hs_line', lean > LIM.hsLean || segs > 2*LIM.hsLean, lean > LIM.hsLean - 2 || segs > 2*LIM.hsLean - 4, dt) && 'hs_line');
     } else { // hollow: lying on back, shoulders and feet lifted, slight banana
       if (tilt(P.S, P.A, ar) > 45) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
       const footUp = m('fu', P.H[1] - P.A[1], dt), shUp = m('su', P.H[1] - P.S[1], dt);
