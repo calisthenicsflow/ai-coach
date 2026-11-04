@@ -1,4 +1,4 @@
-import { createEngine, visibility, EXERCISES, L } from './engine.js';
+import { createEngine, visibility, EXERCISES, FAULTS, L } from './engine.js';
 
 /* ---------- i18n ---------- */
 const T = {
@@ -12,7 +12,8 @@ const T = {
     exSub:{pushup:'сбоку, телефон на полу',pullup:'сбоку или спереди',squat:'сбоку, во весь рост',dip:'сбоку, во весь рост',plank:'удержание, линия тела',hollow:'удержание, лодочка'},
     hint:{pushup:'Телефон на полу <b>сбоку</b>, 1,5–2 м. Если не помещаешься — положи его горизонтально.',pullup:'Поставь телефон в 2–3 м, чтобы были видны перекладина и руки.',
       squat:'Телефон на уровне пояса <b>сбоку</b>, 2–3 м, видно с головы до стоп.',dip:'Телефон <b>сбоку</b> в 2–3 м, видно плечи, локти и таз.',plank:'Телефон на полу <b>сбоку</b>, 1,5–2 м.',hollow:'Телефон на полу <b>сбоку</b>, 1,5–2 м, лёжа на спине.'},
-    cue:{clean:'Чисто!',go_lower:'Ниже!',higher:'Выше!',lockout:'Выпрями руки',hips_up:'Подними таз',hips_down:'Опусти таз',chest_up:'Грудь вверх',hold:'Держи',legs_up:'Ноги выше',legs_lower:'Ноги ниже',shoulders_up:'Плечи от пола',lost:'Не вижу тебя',pos:'Займи позицию'},
+    cue:{clean:'Чисто!',go_lower:'Ниже!',deeper:'Глубже: таз до колен',dip_lower:'Ниже: плечи до локтей',lockout:'Выпрями руки до конца',full_hang:'Полный вис внизу',chin_over:'Подбородок над перекладиной',no_kipping:'Без рывка ногами',no_swing:'Не раскачивайся',stand_tall:'Встань до конца',chest_up:'Грудь вверх',knees_out:'Колени наружу',hips_high:'Таз слишком высоко',hips_sag:'Таз провис',elbows_in:'Локти ближе к корпусу',hands_under:'Ладони под плечами',shoulders_over_elbows:'Плечи над локтями',shoulders_over_wrists:'Плечи над запястьями',legs_lower:'Опусти ноги ниже',legs_up:'Ноги от пола',shoulders_up:'Лопатки от пола',hold:'Держи',lost:'Не вижу тебя',pos:'Займи позицию'},
+    settings:'Настройки',language:'Язык',voiceRu:'Голос (русский)',voiceEn:'Голос (английский)',male:'Мужской',female:'Женский',voiceOn:'Голосовые подсказки',preview:'Прослушать',close:'Готово',
     say:{halfway:'Половина',last:'Последний!',done:'Готово!',summary:(n,p,b)=>`${n} чистых. Техника ${p} процентов.${b?` Не засчитано: ${b}.`:''}`},
   },
   en: { title:'AI Coach', subtitle:'Counts only clean reps. Video never leaves your phone.', target:'Target', voice:'Voice', camFront:'Front camera', camBack:'Back camera',
@@ -25,16 +26,17 @@ const T = {
     exSub:{pushup:'side view, phone on floor',pullup:'side or front view',squat:'side view, full body',dip:'side view, full body',plank:'hold, body line',hollow:'hold, banana shape'},
     hint:{pushup:'Phone on the floor, <b>side view</b>, 1.5–2 m away. If you don\'t fit, turn it landscape.',pullup:'Place the phone 2–3 m away so the bar and your arms are visible.',
       squat:'Phone at waist height, <b>side view</b>, 2–3 m, head to feet visible.',dip:'Phone <b>side view</b>, 2–3 m, shoulders, elbows and hips visible.',plank:'Phone on the floor, <b>side view</b>, 1.5–2 m.',hollow:'Phone on the floor, <b>side view</b>, 1.5–2 m, lying on your back.'},
-    cue:{clean:'Clean!',go_lower:'Go lower',higher:'Chin over bar',lockout:'Full extension',hips_up:'Hips up',hips_down:'Hips down',chest_up:'Chest up',hold:'Hold',legs_up:'Legs up',legs_lower:'Legs lower',shoulders_up:'Shoulders up',lost:'Can\'t see you',pos:'Get in position'},
+    cue:{clean:'Clean!',go_lower:'Go lower',deeper:'Deeper: hips to knees',dip_lower:'Lower: shoulders to elbows',lockout:'Lock out arms',full_hang:'Full hang',chin_over:'Chin over bar',no_kipping:'No kipping',no_swing:'Stop swinging',stand_tall:'Stand tall',chest_up:'Chest up',knees_out:'Knees out',hips_high:'Hips too high',hips_sag:'Hips sagging',elbows_in:'Elbows in',hands_under:'Hands under shoulders',shoulders_over_elbows:'Shoulders over elbows',shoulders_over_wrists:'Shoulders over wrists',legs_lower:'Lower your legs',legs_up:'Lift your legs',shoulders_up:'Shoulders off floor',hold:'Hold',lost:'Can\'t see you',pos:'Get in position'},
+    settings:'Settings',language:'Language',voiceRu:'Voice (Russian)',voiceEn:'Voice (English)',male:'Male',female:'Female',voiceOn:'Voice cues',preview:'Preview',close:'Done',
     say:{halfway:'Halfway',last:'Last one!',done:'Done!',summary:(n,p,b)=>`${n} clean reps. Technique ${p} percent.${b?` ${b} not counted.`:''}`},
   }
 };
 const EX_ORDER = ['pushup','pullup','squat','dip','plank','hollow'];
-const BAD_CUES = new Set(['go_lower','higher','lockout','hips_up','hips_down','chest_up','legs_up','legs_lower','shoulders_up']);
+const BAD_CUES = new Set(FAULTS);
 
 const $ = id => document.getElementById(id);
 const S = JSON.parse(localStorage.getItem('cf_settings') || '{}');
-const cfg = { lang: S.lang || 'ru', ex: S.ex || 'pushup', voice: S.voice ?? true, front: S.front ?? false, targets: S.targets || { pushup:20, pullup:10, squat:20, dip:15, plank:60, hollow:30 } };
+const cfg = { lang: S.lang || 'ru', ex: S.ex || 'pushup', voice: S.voice ?? true, front: S.front ?? false, voices: S.voices || { ru:'m', en:'m' }, targets: S.targets || { pushup:20, pullup:10, squat:20, dip:15, plank:60, hollow:30 } };
 const save = () => localStorage.setItem('cf_settings', JSON.stringify(cfg));
 const t = () => T[cfg.lang];
 const isHold = () => EXERCISES[cfg.ex].kind === 'hold';
@@ -43,7 +45,6 @@ function show(id) { document.querySelectorAll('.screen').forEach(s => s.classLis
 function applyLang() {
   document.documentElement.lang = cfg.lang;
   document.querySelectorAll('[data-i]').forEach(el => { const v = t()[el.dataset.i]; if (typeof v === 'string') el.textContent = v; });
-  $('langBtn').textContent = cfg.lang === 'ru' ? 'EN' : 'RU';
   $('camBtn').textContent = cfg.front ? t().camFront : t().camBack;
   $('voiceBtn').classList.toggle('on', cfg.voice);
   renderEx(); renderTarget(); renderStreak();
@@ -66,17 +67,52 @@ function getStreak() {
 function markToday() { const a = new Set(JSON.parse(localStorage.getItem('cf_days') || '[]')); a.add(dayKey()); localStorage.setItem('cf_days', JSON.stringify([...a].slice(-400))); }
 function renderStreak() { const n = getStreak(); $('homeStreak').textContent = n ? t().streakHome(n) : ''; }
 
-/* ---------- voice ---------- */
+/* ---------- voice: pre-generated neural TTS clips via Web Audio, speechSynthesis fallback ---------- */
 let voiceOn = true;
-function speak(text, { interrupt = false } = {}) {
-  if (!cfg.voice || !voiceOn || !('speechSynthesis' in window)) return;
-  const u = new SpeechSynthesisUtterance(String(text));
-  u.lang = cfg.lang === 'ru' ? 'ru-RU' : 'en-US'; u.rate = 1.05;
-  const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith(cfg.lang)); if (v) u.voice = v;
-  if (interrupt) speechSynthesis.cancel();
-  speechSynthesis.speak(u);
+const ACtx = window.AudioContext || window.webkitAudioContext;
+let ac = null, gain = null, playing = [], endT = 0, seq = 0;
+const bufs = new Map();
+const vdir = () => `${cfg.lang}-${cfg.voices[cfg.lang] || 'm'}`;
+function unlockAudio() { // must run inside a user gesture (iOS)
+  try {
+    if (!ac && ACtx) { ac = new ACtx(); gain = ac.createGain(); gain.gain.value = 1; gain.connect(ac.destination); }
+    if (ac) { if (ac.state !== 'running') ac.resume(); const s = ac.createBufferSource(); s.buffer = ac.createBuffer(1, 1, 22050); s.connect(gain); s.start(0); }
+  } catch {}
+  try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch {}
 }
-function unlockSpeech() { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch {} }
+function clip(key, dir = vdir()) {
+  const id = dir + '/' + key; if (bufs.has(id)) return bufs.get(id);
+  const p = fetch(`audio/${id}.mp3`).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(ab => new Promise((res, rej) => (ac ? ac.decodeAudioData(ab, res, rej) : rej()))).catch(() => { bufs.delete(id); return null; });
+  bufs.set(id, p); return p;
+}
+function preloadVoice(target) {
+  if (!ac) return;
+  const keys = ['go','halfway','last','done','clean','hold','lost','pos', ...FAULTS];
+  for (let i = 0; i <= Math.min(120, Math.max(10, target)); i++) keys.push('n' + i);
+  keys.forEach(k => clip(k));
+}
+function stopVoice() { seq++; playing.forEach(s => { try { s.stop(); } catch {} }); playing = []; endT = 0; try { speechSynthesis.cancel(); } catch {} }
+function speakTTS(text, interrupt) {
+  if (!('speechSynthesis' in window) || text == null) return;
+  const u = new SpeechSynthesisUtterance(String(text)); u.lang = cfg.lang === 'ru' ? 'ru-RU' : 'en-US'; u.rate = 1.05;
+  const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith(cfg.lang)); if (v) u.voice = v;
+  if (interrupt) speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+// say(['n12','halfway'], '12. Halfway') — plays clips back to back; falls back to speechSynthesis if any clip is missing
+async function say(keys, text, { interrupt = true, force = false } = {}) {
+  if (!force && (!cfg.voice || !voiceOn)) return;
+  if (interrupt) stopVoice();
+  const my = seq;
+  if (!ac) return speakTTS(text, interrupt);
+  const list = await Promise.all(keys.map(k => clip(k)));
+  if (my !== seq) return;
+  if (list.some(b => !b)) return speakTTS(text, interrupt);
+  let t0 = Math.max(ac.currentTime + 0.02, endT);
+  for (const b of list) { const s = ac.createBufferSource(); s.buffer = b; s.connect(gain); s.start(t0); playing.push(s); s.onended = () => { playing = playing.filter(x => x !== s); }; t0 += b.duration + 0.06; }
+  endT = t0;
+}
+const sayNum = (n, extra = [], text = '', opt) => say(n <= 120 ? ['n' + n, ...extra] : [], `${n}. ${text}`, opt);
 
 /* ---------- pose model ---------- */
 let landmarker = null;
@@ -95,7 +131,7 @@ const cv = $('cv'), ctx = cv.getContext('2d'), vid = $('vid');
 let stream = null, raf = 0, W = null, wakeLock = null;
 
 async function startWorkout() {
-  unlockSpeech(); voiceOn = true; $('muteBtn').textContent = '🔊';
+  unlockAudio(); voiceOn = true; preloadVoice(cfg.targets[cfg.ex]); $('muteBtn').textContent = '🔊';
   show('work'); $('loading').classList.add('show');
   $('cue').className = 'cue'; $('dots').innerHTML = ''; $('barFill').style.width = '0';
   try {
@@ -182,8 +218,8 @@ function countdown() {
   const big = $('big'); let n = 3; const name = t().ex[W.ex][0];
   const tick = () => {
     if (!W) return;
-    if (n > 0) { big.innerHTML = `<small>${name}</small>${n}`; big.classList.add('show'); speak(n, { interrupt: true }); n--; setTimeout(tick, 1000); }
-    else { big.innerHTML = `<small>${name}</small><span style="font-size:56px">${t().go}</span>`; speak(t().go, { interrupt: true });
+    if (n > 0) { big.innerHTML = `<small>${name}</small>${n}`; big.classList.add('show'); sayNum(n); n--; setTimeout(tick, 1000); }
+    else { big.innerHTML = `<small>${name}</small><span style="font-size:56px">${t().go}</span>`; say(['go'], t().go);
       setTimeout(() => big.classList.remove('show'), 700);
       W.engine = createEngine(W.ex, { aspect: vid.videoWidth / vid.videoHeight }); W.t0 = performance.now(); W.phase = 'active'; }
   };
@@ -201,25 +237,26 @@ function handle(r, now) {
       $('cNum').textContent = r.reps; const p = $('plus'); p.classList.remove('go'); void p.offsetWidth; p.classList.add('go');
       const c = document.querySelector('.counter'); c.classList.remove('pulse'); void c.offsetWidth; c.classList.add('pulse');
       showCue('clean', '');
-      if (r.reps === W.target) { speak(t().say.done, { interrupt: true }); return finish(true); }
-      if (r.reps === Math.ceil(W.target / 2) && W.target >= 6) speak(`${r.reps}. ${t().say.halfway}`, { interrupt: true });
-      else if (r.reps === W.target - 1 && W.target > 3) speak(`${r.reps}. ${t().say.last}`, { interrupt: true });
-      else speak(r.reps, { interrupt: true });
-    } else { showCue(e.reason, 'bad'); speak(t().cue[e.reason], { interrupt: true }); W.lastCueSpoken = now; }
+      if (r.reps === W.target) { sayNum(r.reps, ['done'], t().say.done); return finish(true); }
+      if (r.reps === Math.ceil(W.target / 2) && W.target >= 6) sayNum(r.reps, ['halfway'], t().say.halfway);
+      else if (r.reps === W.target - 1 && W.target > 3) sayNum(r.reps, ['last'], t().say.last);
+      else sayNum(r.reps);
+    } else { showCue(e.reason, 'bad'); say([e.reason], t().cue[e.reason]); W.lastCueSpoken = now; }
   }
   // live form cues (not tied to a finished rep)
   if (r.cue && BAD_CUES.has(r.cue) && !r.events.length) {
     showCue(r.cue, r.seg === 'warn' ? 'warn' : 'bad');
-    if (now - W.lastCueSpoken > 2500) { speak(t().cue[r.cue], { interrupt: true }); W.lastCueSpoken = now; }
+    if (now - W.lastCueSpoken > 2500 || r.cue !== W.lastCueKey) { if (now - W.lastCueSpoken > 1200) { say([r.cue], t().cue[r.cue]); W.lastCueSpoken = now; W.lastCueKey = r.cue; } }
   } else if ((r.status === 'lost' && r.lostT > 1.5) || r.status === 'pos') { if (!hold || r.status === 'lost') showCue(r.status, 'warn'); }
   if (hold) {
     const s = Math.floor(r.holdGood); $('cNum').textContent = s;
     $('barFill').style.width = Math.min(100, r.holdGood / W.target * 100) + '%';
     if (s > W.holdSpoken) { W.holdSpoken = s;
-      if (s === Math.floor(W.target / 2) && W.target >= 20) speak(t().say.halfway);
-      else if (s >= W.target - 3 && s < W.target) speak(W.target - s);
-      else if (s % 10 === 0) speak(s);
-      if (s >= W.target) { speak(t().say.done, { interrupt: true }); return finish(true); } }
+      const busy = now - W.lastCueSpoken < 1500;
+      if (s >= W.target) { say(['done'], t().say.done); return finish(true); }
+      if (s === Math.floor(W.target / 2) && W.target >= 20) say(['halfway'], t().say.halfway, { interrupt: !busy });
+      else if (s >= W.target - 3) sayNum(W.target - s, [], '', { interrupt: !busy });
+      else if (s % 10 === 0) sayNum(s, [], '', { interrupt: !busy }); }
   } else $('barFill').style.width = Math.min(100, r.reps / W.target * 100) + '%';
 }
 
@@ -235,7 +272,9 @@ function finish(goal) {
   if (n > 0) markToday();
   const res = { ex: W.ex, n, bad: hold ? Math.round(r.holdTotal - r.holdGood) : r.bad, tech, secs, goal: goal || n >= W.target, attempts: W.attempts };
   stopCamera(); W = null; showSummary(res);
-  setTimeout(() => speak(t().say.summary(res.n, res.tech, res.bad)), 500);
+  setTimeout(() => { const k = ['s_done', hold ? 's_hold' : 's_clean', 'n' + Math.min(120, res.n), 's_tech', 'p' + res.tech];
+    if (res.bad && !hold) k.push('s_bad', 'n' + Math.min(120, res.bad));
+    say(res.n > 120 ? [] : k, t().say.summary(res.n, res.tech, res.bad), { interrupt: false }); }, 700);
 }
 
 let lastRes = null;
@@ -258,16 +297,30 @@ async function share() {
 }
 
 /* ---------- wire ---------- */
-$('langBtn').onclick = () => { cfg.lang = cfg.lang === 'ru' ? 'en' : 'ru'; save(); applyLang(); };
-$('voiceBtn').onclick = () => { cfg.voice = !cfg.voice; save(); applyLang(); };
+function renderSettings() {
+  document.querySelectorAll('#sheet [data-set]').forEach(b => { const [k, v] = b.dataset.set.split(':');
+    const cur = k === 'lang' ? cfg.lang : k === 'voice' ? String(cfg.voice) : cfg.voices[k]; b.classList.toggle('sel', cur === v); });
+}
+document.querySelectorAll('#sheet [data-set]').forEach(b => b.onclick = () => {
+  unlockAudio(); const [k, v] = b.dataset.set.split(':');
+  if (k === 'lang') cfg.lang = v; else if (k === 'voice') cfg.voice = v === 'true'; else cfg.voices[k] = v;
+  save(); applyLang(); renderSettings();
+  if (k === 'ru' || k === 'en') { const l = cfg.lang; cfg.lang = k; say(['s_great'], k === 'ru' ? 'Отличная работа!' : 'Great work!', { force: true }); cfg.lang = l; }
+});
+$('setBtn').onclick = () => { unlockAudio(); renderSettings(); $('sheet').classList.add('show'); };
+$('sheetClose').onclick = () => $('sheet').classList.remove('show');
+$('sheet').onclick = e => { if (e.target.id === 'sheet') $('sheet').classList.remove('show'); };
+$('previewBtn').onclick = () => { unlockAudio(); say(['n3', 'n2', 'n1', 'go'], '3 2 1 ' + t().go, { force: true }); };
+$('voiceBtn').onclick = () => { unlockAudio(); cfg.voice = !cfg.voice; save(); applyLang(); };
 $('camBtn').onclick = () => { cfg.front = !cfg.front; save(); applyLang(); };
 $('tMinus').onclick = () => step(-1); $('tPlus').onclick = () => step(1);
 $('startBtn').onclick = startWorkout; $('againBtn').onclick = startWorkout;
 $('homeBtn').onclick = () => { applyLang(); show('home'); };
 $('shareBtn').onclick = share;
 $('finishBtn').onclick = () => finish(false);
-$('quitBtn').onclick = () => { stopCamera(); W = null; speechSynthesis?.cancel(); applyLang(); show('home'); };
-$('muteBtn').onclick = () => { voiceOn = !voiceOn; $('muteBtn').textContent = voiceOn ? '🔊' : '🔈'; if (!voiceOn) speechSynthesis.cancel(); };
+$('quitBtn').onclick = () => { stopCamera(); W = null; stopVoice(); applyLang(); show('home'); };
+$('muteBtn').onclick = () => { voiceOn = !voiceOn; $('muteBtn').textContent = voiceOn ? '🔊' : '🔈'; if (!voiceOn) stopVoice(); };
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
+document.addEventListener('touchend', unlockAudio, { once: true }); document.addEventListener('click', unlockAudio, { once: true });
 applyLang();
 loadModel().catch(() => {}); // warm up in background

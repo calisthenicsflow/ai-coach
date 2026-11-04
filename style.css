@@ -69,3 +69,18 @@ h1{font:900 44px/1 Montserrat;margin:34px 0 10px;letter-spacing:-.01em}
 .legend i{width:8px;height:8px;border-radius:50%;display:inline-block}.legend i.g{background:var(--lime)}.legend i.r{background:var(--bad);margin-left:10px}
 #sum .cta{margin-top:18px}
 .two{gap:10px}.ghost{flex:1;border:1px solid var(--line);border-radius:16px;padding:15px;font:800 13px Montserrat;letter-spacing:.1em;text-transform:uppercase}
+
+.ibtn.sm{width:40px;height:40px;display:grid;place-items:center;color:#F4F4EE}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50}
+.sheet.show{opacity:1;pointer-events:auto}
+.sheet .panel{width:100%;max-width:520px;margin:0 auto;background:#0E100E;border:1px solid rgba(244,244,238,.08);border-bottom:0;border-radius:24px 24px 0 0;padding:14px 22px calc(24px + env(safe-area-inset-bottom));transform:translateY(30px);transition:transform .25s}
+.sheet.show .panel{transform:none}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:rgba(244,244,238,.18);margin:0 auto 14px}
+.sheet h2{font:800 22px Montserrat,sans-serif;letter-spacing:.02em;margin:0 0 8px;color:#F4F4EE}
+.sheet label{display:block;font:700 11px Montserrat,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,244,238,.5);margin:18px 0 8px}
+.seg{display:flex;gap:6px;background:rgba(244,244,238,.05);border-radius:14px;padding:4px}
+.seg button{flex:1;border:0;background:transparent;color:rgba(244,244,238,.7);font:600 15px Manrope,sans-serif;padding:11px 8px;border-radius:10px;cursor:pointer}
+.seg button.sel{background:#C6FF00;color:#060706;font-weight:700}
+.row2{display:flex;gap:10px;margin-top:24px;align-items:center}
+.row2 .cta.sm{flex:1;margin:0;padding:15px}
+.row2 .chip{padding:15px 18px}

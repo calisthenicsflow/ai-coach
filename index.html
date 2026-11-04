@@ -16,7 +16,7 @@
 <section id="home" class="screen active">
   <header class="top">
     <div class="brand"><span class="dot"></span>CALISTHENICS FLOW</div>
-    <button id="langBtn" class="chip">EN</button>
+    <button id="setBtn" class="ibtn sm" aria-label="settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
   </header>
   <h1 data-i="title">AI-тренер</h1>
   <p class="sub" data-i="subtitle">Считает только чистые повторы. Видео не покидает телефон.</p>
@@ -75,6 +75,19 @@
   <button id="shareBtn" class="cta" data-i="share">Поделиться</button>
   <div class="row two"><button id="againBtn" class="ghost" data-i="again">Ещё раз</button><button id="homeBtn" class="ghost" data-i="home">На главную</button></div>
 </section>
+<div id="sheet" class="sheet"><div class="panel">
+  <div class="grab"></div>
+  <h2 data-i="settings">Настройки</h2>
+  <label data-i="language">Язык</label>
+  <div class="seg"><button data-set="lang:ru">Русский</button><button data-set="lang:en">English</button></div>
+  <label data-i="voiceRu">Голос (русский)</label>
+  <div class="seg"><button data-set="ru:m" data-i="male">Мужской</button><button data-set="ru:f" data-i="female">Женский</button></div>
+  <label data-i="voiceEn">Голос (английский)</label>
+  <div class="seg"><button data-set="en:m" data-i="male">Мужской</button><button data-set="en:f" data-i="female">Женский</button></div>
+  <label data-i="voiceOn">Голосовые подсказки</label>
+  <div class="seg"><button data-set="voice:true">ON</button><button data-set="voice:false">OFF</button></div>
+  <div class="row2"><button id="previewBtn" class="chip" data-i="preview">Прослушать</button><button id="sheetClose" class="cta sm" data-i="close">Готово</button></div>
+</div></div>
 <script type="module" src="app.js"></script>
 </body>
 </html>
