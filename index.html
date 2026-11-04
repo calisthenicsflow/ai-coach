@@ -11,7 +11,7 @@
 <title>Calisthenics Flow · AI Coach</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.0">
+<link rel="stylesheet" href="style.css?v=3.1">
 </head>
 <body>
 <!-- HOME -->
@@ -33,7 +33,7 @@
   </div>
   <button id="startBtn" class="cta" data-i="start">Начать</button>
   <p class="streak" id="homeStreak"></p>
-  <p class="foot">@calistenics_flow · Yuri Zubarev · <span class="ver">v3.0</span></p>
+  <p class="foot">@calistenics_flow · Yuri Zubarev · <span class="ver">v3.1</span></p>
 </section>
 
 <!-- WORKOUT -->
@@ -48,6 +48,7 @@
       <button id="quitBtn" class="ibtn" aria-label="close">✕</button>
     </div>
   </div>
+  <div id="viewChip" class="vchip"></div>
   <pre id="dbgOut" class="dbg"></pre>
   <div id="calib" class="calib">
     <div class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" class="bg"/><circle id="ringFg" cx="20" cy="20" r="17" class="fg"/></svg></div>
@@ -78,6 +79,12 @@
   <button id="shareBtn" class="cta" data-i="share">Поделиться</button>
   <div class="row two"><button id="againBtn" class="ghost" data-i="again">Ещё раз</button><button id="homeBtn" class="ghost" data-i="home">На главную</button></div>
 </section>
+<div id="tip" class="sheet tip"><div class="panel">
+  <div class="grab"></div>
+  <div class="tiphead"><h2 id="tipTitle"></h2><button id="tipX" class="ibtn sm" aria-label="close">✕</button></div>
+  <div id="tipBody"></div>
+  <button id="tipGo" class="cta"></button>
+</div></div>
 <div id="sheet" class="sheet"><div class="panel">
   <div class="grab"></div>
   <h2 data-i="settings">Настройки</h2>
@@ -89,11 +96,14 @@
   <div class="seg"><button data-set="en:m" data-i="male">Мужской</button><button data-set="en:f" data-i="female">Женский</button></div>
   <label data-i="voiceOn">Голосовые подсказки</label>
   <div class="seg"><button data-set="voice:true">ON</button><button data-set="voice:false">OFF</button></div>
+  <label data-i="model">Модель позы</label>
+  <div class="seg"><button data-set="model:lite" data-i="mLite">Быстрая</button><button data-set="model:full" data-i="mFull">Стандарт</button><button data-set="model:heavy" data-i="mHeavy">Макс</button></div>
+  <p class="verline" id="modelNote">lite 5,8 MB · full 9,4 MB · heavy 30,7 MB</p>
   <label data-i="debug">Отладка (углы на экране)</label>
   <div class="seg"><button data-set="debug:true">ON</button><button data-set="debug:false">OFF</button></div>
-  <p class="verline"><span data-i="version">Версия</span> v3.0</p>
+  <p class="verline"><span data-i="version">Версия</span> v3.1</p>
   <div class="row2"><button id="previewBtn" class="chip" data-i="preview">Прослушать</button><button id="sheetClose" class="cta sm" data-i="close">Готово</button></div>
 </div></div>
-<script type="module" src="app.js?v=3.0"></script>
+<script type="module" src="app.js?v=3.1"></script>
 </body>
 </html>

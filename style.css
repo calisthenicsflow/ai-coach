@@ -89,3 +89,12 @@ h1{font:900 44px/1 Montserrat;margin:34px 0 10px;letter-spacing:-.01em}
 .dbg:not(:empty){display:block}
 .verline{margin:16px 0 0;font:600 12px Manrope,sans-serif;color:rgba(244,244,238,.5);letter-spacing:.06em}
 .ver{color:rgba(216,255,60,.7)}
+
+.vchip{position:absolute;top:calc(env(safe-area-inset-top) + 92px);left:14px;z-index:6;max-width:72%;font:600 11px/1.4 Manrope,sans-serif;color:rgba(244,244,238,.85);background:rgba(6,7,6,.6);border:1px solid rgba(198,255,0,.35);border-radius:12px;padding:6px 10px;display:none;pointer-events:none}
+.vchip.show{display:block}.vchip b{font:800 11px Montserrat;letter-spacing:.12em;text-transform:uppercase;color:#C6FF00}.vchip em{font-style:normal;color:#FFC23A}
+.vchip.warn{border-color:rgba(255,194,58,.6)}.vchip span{color:rgba(244,244,238,.7)}
+.tip .panel{max-height:92vh;overflow:auto}.tiphead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tipsvg{width:100%;height:auto;display:block;margin:6px 0 4px;background:rgba(244,244,238,.03);border-radius:14px}
+.tiplist{list-style:none;padding:0;margin:8px 0;display:grid;gap:8px}.tiplist li{display:flex;gap:10px;align-items:baseline}
+.tiplist small{min-width:118px;font:700 10px Montserrat;letter-spacing:.12em;text-transform:uppercase;color:rgba(244,244,238,.5)}.tiplist b{font:600 14px Manrope;color:#F4F4EE}
+.tipnote{font-size:12px;color:rgba(244,244,238,.6);margin:6px 0 14px}

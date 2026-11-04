@@ -16,6 +16,37 @@ function lineOffset(a, b, p, ar) {
   return -cr; // >0 : above line (pike), <0 : below (sag)
 }
 
+// 3D angle at b (world landmarks, metres)
+function ang3(a, b, c) { const v1=[a[0]-b[0],a[1]-b[1],a[2]-b[2]], v2=[c[0]-b[0],c[1]-b[1],c[2]-b[2]];
+  const d=Math.hypot(...v1)*Math.hypot(...v2)||1e-9; return Math.acos(Math.max(-1,Math.min(1,(v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2])/d)))*180/Math.PI; }
+// 3D deviation of segment a->c from vertical (world y = image down axis), deg
+function vdev3(a, c) { return Math.atan2(Math.hypot(c[0]-a[0], c[2]-a[2]), Math.abs(c[1]-a[1])||1e-9)*180/Math.PI; }
+// One Euro filter (Casiez 2012): low jitter when still, low lag when moving
+function oneEuro(minCut=1.2, beta=8, dCut=1) { let x=null, dx=0; const al=(c,dt)=>1/(1+1/(2*Math.PI*c*dt));
+  return (v, dt) => { if (x==null) return x=v; const ed=(v-x)/dt; dx+=al(dCut,dt)*(ed-dx); x+=al(minCut+beta*Math.abs(dx),dt)*(v-x); return x; }; }
+export const VIS = 0.5;
+// camera view from shoulder/hip orientation: world-z depth vs width (3D), fallback 2D width/torso ratio
+export function viewYaw(lm, wl, ar=9/16) {
+  if (wl) { const y = (i, j) => Math.atan2(Math.abs(wl[i][2]-wl[j][2]), Math.hypot(wl[i][0]-wl[j][0], wl[i][1]-wl[j][1])||1e-9)*180/Math.PI;
+    return (y(11,12) + y(23,24)) / 2; }
+  const d = (i, j) => Math.hypot((lm[i][0]-lm[j][0])*ar, lm[i][1]-lm[j][1]);
+  const mx = (i, j) => [(lm[i][0]+lm[j][0])/2, (lm[i][1]+lm[j][1])/2];
+  const ms = mx(11,12), mh = mx(23,24), tl = Math.hypot((ms[0]-mh[0])*ar, ms[1]-mh[1]) || 1e-6;
+  const r = (d(11,12) + d(23,24)*1.25) / 2 / tl; // ~0.75 facing camera, ~0.1 side-on
+  return Math.acos(Math.max(0, Math.min(1, r / 0.75))) * 180/Math.PI;
+}
+// which checks run in which view. side = profile, front = facing (or back to) camera, d34 = 3/4 diagonal
+export const CHECKS = {
+  pushup:   { side:['hips_sag','hips_high','hands_under','elbows_in'], d34:['hips_sag','hips_high'], front:['elbows_in'] },
+  squat:    { side:['chest_up'], d34:['chest_up','knees_out'], front:['knees_out'] },
+  pullup:   { side:['no_kipping','no_swing'], d34:['no_kipping','no_swing'], front:['no_kipping'] },
+  dip:      { side:['no_kipping'], d34:['no_kipping'], front:['no_kipping'] },
+  plank:    { side:['hips_sag','hips_high','shoulders_over_wrists'], d34:['hips_sag','hips_high'], front:[] },
+  hollow:   { side:['legs_lower','legs_up','shoulders_up'], d34:['legs_lower'], front:[] },
+  handstand:{ side:['straight_arms','open_shoulders','no_banana','hs_line'], d34:['straight_arms','open_shoulders','no_banana','hs_line'], front:['straight_arms','hs_line'] },
+};
+export const BEST_VIEW = { pushup:'side', squat:'side', pullup:'front', dip:'side', plank:'side', hollow:'side', handstand:'side' };
+
 export const EXERCISES = {
   pushup:  { kind:'reps', primary:'elbow', top:145, start:132, depth:100, need:['s','e','w','h','a'], lowCue:'go_lower', lockCue:'lockout' },
   squat:   { kind:'reps', primary:'knee',  top:160, start:140, depth:105, need:['s','h','k','a'], lowCue:'deeper', lockCue:'stand_tall' },
@@ -40,19 +71,21 @@ export function visibility(lm) { // which body groups are visible (either side)
 // plank: real clean side-view planks read offT ~+0.04 and armV ~+4 deg (MediaPipe bias), so limits are centred there
 export const LIM = { offC:0.04, off:0.12, armC:4, arm:10, pbody:164, hsElb:155, hsSh:155, hsHip:163, hsLean:8, hands:0.42, kipPull:140, kipDip:115, chest:45 };
 
-export function createEngine(exId, { aspect = 9/16 } = {}) {
+export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = null, euro = [1.5, 4], hold = 400 } = {}) {
   const ex = EXERCISES[exId]; const ar = aspect; // ar = width/height of frame
   const st = { phase:'top', reps:0, bad:0, attempts:[], minA:999, maxA:0, ascMax:0, faults:new Set(),
     sm:null, lastT:null, holdGood:0, holdTotal:0, cue:null, cueT:0, smBody:null, lostT:0, M:{}, F:{} };
   const dist = (a, b) => Math.hypot((a[0]-b[0])*ar, a[1]-b[1]) || 1e-6;
 
-  function side(lm) {
+  function side(lm, wl) {
     const v = n => (lm[L[n]][3] ?? 1);
     const l = v('ls')+v('lh')+v('le')+v('lk')+v('la')+v('lw'), r = v('rs')+v('rh')+v('re')+v('rk')+v('ra')+v('rw');
     st.sideL = (st.sideL ?? 0) * 0.9 + (l - r) * 0.1; // sticky side choice: avoids left/right flips
     const s = st.sideL >= 0 ? 'l' : 'r'; const g = n => lm[L[s+n]];
     const kv = v(s+'k') > 0.5;
-    return { S:g('s'), E:g('e'), W:g('w'), H:g('h'), K:g('k'), A:g('a'), N:lm[0], kv,
+    const w = wl ? (n => wl[L[s+n]]) : null;
+    const P3 = w ? { S:w('s'), E:w('e'), W:w('w'), H:w('h'), K:w('k'), A:w('a'), K2:wl[L.lk], K3:wl[L.rk], A2:wl[L.la], A3:wl[L.ra] } : null;
+    return { P3, S:g('s'), E:g('e'), W:g('w'), H:g('h'), K:g('k'), A:g('a'), N:lm[0], kv,
       S2:lm[L.ls], S3:lm[L.rs], K2:lm[L.lk], K3:lm[L.rk], A2:lm[L.la], A3:lm[L.ra], H2:lm[L.lh], H3:lm[L.rh] };
   }
   function ema(prev, x, dt, tau=0.07) { if (prev==null) return x; const a = 1-Math.exp(-dt/tau); return prev + a*(x-prev); }
@@ -74,31 +107,68 @@ export function createEngine(exId, { aspect = 9/16 } = {}) {
     return [sag && 'hips_sag', high && 'hips_high'];
   }
 
-  function update(lm, tMs) {
+  // smoothing + visibility: One Euro per coordinate; low-visibility points hold their last good position briefly, then drop out
+  function prep(lm, wl, dt, tMs) {
+    if (!(smooth ?? !['pushup','plank'].includes(exId))) return [lm, wl];  // push-up/plank already read well raw; One Euro lagged lockouts there
+    const F = st.flt || (st.flt = { p:[], w:[], last:[] }); const out = [], wout = wl ? [] : null;
+    for (let i = 0; i < lm.length; i++) {
+      const p = lm[i], v = p[3] ?? 1, last = F.last[i];
+      if (v >= VIS || !last) {
+        const f = F.p[i] || (F.p[i] = [oneEuro(...euro), oneEuro(...euro), oneEuro(...euro)]);
+        const q = [f[0](p[0], dt), f[1](p[1], dt), f[2](p[2], dt), v]; out.push(q);
+        if (v >= VIS) F.last[i] = { q, t:tMs };
+      } else if (tMs - last.t < hold) out.push([last.q[0], last.q[1], last.q[2], VIS + 0.01]); // brief dropout: hold
+      else { out.push(p); F.p[i] = null; }
+      if (wl) { const f = F.w[i] || (F.w[i] = [oneEuro(...euro), oneEuro(...euro), oneEuro(...euro)]); const w = wl[i]; wout.push([f[0](w[0], dt), f[1](w[1], dt), f[2](w[2], dt)]); }
+    }
+    return [out, wout];
+  }
+  function view(lm, wl, dt) {
+    const y = viewYaw(lm, wl, ar); st.yaw = ema(st.yaw, y, dt, 0.6);
+    const v = st.view, Y = st.yaw; // hysteresis between views
+    // push-up/plank on the floor: depth (z) is the least reliable there and the side view is the norm -> stickier side
+    const fl = exId === 'pushup' || exId === 'plank', sOut = fl ? 32 : 47, sIn = fl ? 44 : 60, s0 = fl ? 42 : 55;
+    st.view = !v ? (Y > s0 ? 'side' : Y < 30 ? 'front' : 'd34')
+      : v === 'side' ? (Y < sOut ? 'd34' : 'side') : v === 'front' ? (Y > 38 ? 'd34' : 'front') : (Y > sIn ? 'side' : Y < 25 ? 'front' : 'd34');
+    if (forceView) st.view = forceView;
+    return st.view;
+  }
+
+  function update(lm0, tMs, wl0) {
     const dt = st.lastT==null ? 0.033 : Math.max(0.001, Math.min(0.5, (tMs-st.lastT)/1000)); st.lastT = tMs;
     const ev = []; const res = { events:ev, seg:'good', angle:null, live:[] };
-    if (!lm) { st.lostT += dt; return finish(res, 'lost'); }
+    if (!lm0) { st.lostT += dt; return finish(res, 'lost'); }
+    const [lm, wl] = prep(lm0, wl0, dt, tMs); res.lm = lm;
+    const V = res.view = view(lm, wl, dt); res.yaw = st.yaw;
+    res.checks = (CHECKS[exId] || {})[V] || [];
     const vis = visibility(lm); const ok = ex.need.every(k => vis[k]);
     if (!ok) { st.lostT += dt; return finish(res, 'lost'); }
     st.lostT = 0;
-    const P = side(lm);
-    const bodyLine = ang(P.S, P.H, P.A, ar);           // 180 = straight
-    const off = m('off', lineOffset(P.S, P.A, P.H, ar), dt);   // + pike, - sag
+    const P = side(lm, wl); const P3 = P.P3;
+    const use3 = !!P3 && V !== 'side';                      // off-profile: 2D angles are foreshortened -> use 3D world landmarks
+    let bodyLine = ang(P.S, P.H, P.A, ar), offRaw = lineOffset(P.S, P.A, P.H, ar);
+    if (use3) { bodyLine = ang3(P3.S, P3.H, P3.A);
+      const u = [P3.A[0]-P3.S[0], P3.A[1]-P3.S[1], P3.A[2]-P3.S[2]], h = [P3.H[0]-P3.S[0], P3.H[1]-P3.S[1], P3.H[2]-P3.S[2]];
+      const k = (u[0]*h[0]+u[1]*h[1]+u[2]*h[2]) / (u[0]*u[0]+u[1]*u[1]+u[2]*u[2] || 1e-9);
+      offRaw = -(h[1] - k*u[1]); }                          // + hips above the shoulder-ankle line (pike)
+    const off = m('off', offRaw, dt);   // + pike, - sag
     st.smBody = ema(st.smBody, bodyLine, dt, 0.15);
     res.body = st.smBody;
 
-    if (ex.kind === 'hold') return hold(P, dt, tMs, res, off);
+    res.use3 = use3;
+    if (ex.kind === 'hold') return hold(P, dt, tMs, res, off, V, use3);
 
-    const raw = ex.primary === 'knee' ? ang(P.H, P.K, P.A, ar) : ang(P.S, P.E, P.W, ar);
+    const raw = (use3 && ex.primary !== 'knee') ? (ex.primary === 'knee' ? ang3(P3.H, P3.K, P3.A) : ang3(P3.S, P3.E, P3.W))
+      : ex.primary === 'knee' ? ang(P.H, P.K, P.A, ar) : ang(P.S, P.E, P.W, ar);
     st.buf = (st.buf || []).concat([[tMs, raw]]).filter(b => tMs - b[0] <= 110).slice(-5); // short time-window median kills 1-frame glitches
     const vals = st.buf.map(b => b[1]).sort((x,y)=>x-y); const med = vals.length === 2 ? (vals[0]+vals[1])/2 : vals[vals.length>>1];
     const a = st.sm = ema(st.sm, med, dt, 0.04); res.angle = a;
 
     // posture gate: are we in the exercise position?
-    const torso = tilt(P.S, P.H, ar);
+    const torso = use3 ? 90 - vdev3(P3.H, P3.S) : tilt(P.S, P.H, ar);
     let inPos = true;
     if (exId === 'pushup') inPos = tilt(P.S, P.A, ar) < 40 && P.W[1] > P.S[1];
-    if (exId === 'squat')  inPos = torso > 35;
+    if (exId === 'squat')  inPos = Math.max(torso, tilt(P.S, P.H, ar)) > 35;  // 3D torso can read leaned on deep front-view squats
     if (exId === 'dip')    inPos = torso > 45 && P.W[1] > P.S[1];
     if (exId === 'pullup') inPos = P.W[1] < P.S[1];
     if (!inPos) { if (st.phase !== 'top') { st.phase='top'; } st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
@@ -114,22 +184,27 @@ export function createEngine(exId, { aspect = 9/16 } = {}) {
       // elbow flare (side view): at the bottom, upper arm foreshortened and ~perpendicular to torso
       const sh = ang(P.H, P.S, P.E, ar), ratio = dist(P.S, P.E) / dist(P.E, P.W);
       res.dbg = { hw, sh, ratio };
-      if (a < 115) live.push(flag('elbows_in', sh > 80 && ratio < 0.55, sh > 72 && ratio < 0.65, dt, 0.25) && 'elbows_in');
+      if (V === 'front') { // facing camera: elbows flare = elbow span much wider than shoulder span at the bottom
+        const ew = Math.abs(lm[L.le][0]-lm[L.re][0]) / (Math.abs(lm[L.ls][0]-lm[L.rs][0]) || 1e-6);
+        const er = m('ew', ew, dt, 0.15); res.dbg.ew = er;
+        if (a < 115) live.push(flag('elbows_in', er > 1.7, er > 1.55, dt, 0.25) && 'elbows_in');
+      } else if (a < 115) live.push(flag('elbows_in', sh > 80 && ratio < 0.55, sh > 72 && ratio < 0.65, dt, 0.25) && 'elbows_in');
     }
     if (exId === 'squat') {
       live.push(flag('chest_up', working && torso < LIM.chest, working && torso < LIM.chest+6, dt, 0.3) && 'chest_up');
       // knee valgus: only measurable from the front (shoulders wide in image)
       const sw = Math.abs(P.S2[0]-P.S3[0])*ar, tl = dist(P.S, P.H);
       const allV = [P.K2,P.K3,P.A2,P.A3].every(p => (p[3] ?? 1) > 0.6);
-      if (allV && sw > 0.45*tl && working && a < 140) {
-        const kw = Math.abs(P.K2[0]-P.K3[0]), aw = Math.abs(P.A2[0]-P.A3[0]) || 1e-6;
+      if (allV && (P3 ? V !== 'side' : sw > 0.45*tl) && working && a < 140) {
+        const hz = (p, q) => Math.hypot(p[0]-q[0], p[2]-q[2]);
+        const kw = P3 ? hz(P3.K2, P3.K3) : Math.abs(P.K2[0]-P.K3[0]), aw = (P3 ? hz(P3.A2, P3.A3) : Math.abs(P.A2[0]-P.A3[0])) || 1e-6;
         const kr = m('kr', kw/aw, dt, 0.15); res.dbg = { kr };
         live.push(flag('knees_out', kr < 0.75, kr < 0.85, dt, 0.25) && 'knees_out');
       }
     }
     if (exId === 'pullup' || exId === 'dip') {
       if (P.kv) { // knee / leg drive: hip flexion
-        const hip = m('hip', ang(P.S, P.H, P.K, ar), dt, 0.1);
+        const hip = m('hip', use3 ? ang3(P3.S, P3.H, P3.K) : ang(P.S, P.H, P.K, ar), dt, 0.1);
         const lim = exId === 'pullup' ? LIM.kipPull : LIM.kipDip;
         live.push(flag('no_kipping', hip < lim, hip < lim + 8, dt, 0.2) && 'no_kipping');
         res.dbg = { hip };
@@ -145,7 +220,7 @@ export function createEngine(exId, { aspect = 9/16 } = {}) {
         live.push(flag('no_swing', sr > 0.85, sr > 0.7, dt, 0.3) && 'no_swing');
       }
     }
-    const act = live.filter(Boolean); res.live = act;
+    const act = gate(live, res); res.live = act;
     for (const f of act) if (working || f === 'hands_under' || f.startsWith('hips')) st.faults.add(f);
     if (act.length) { const f = FAULTS.find(k => act.includes(k)); res.seg = 'bad'; setCue(f, tMs); }
 
@@ -177,7 +252,8 @@ export function createEngine(exId, { aspect = 9/16 } = {}) {
     return finish(res, 'ok');
   }
 
-  function hold(P, dt, tMs, res, off) {
+  function hold(P, dt, tMs, res, off, V, use3) {
+    const P3 = P.P3;
     const b = st.smBody; const live = [];
     if (exId === 'plank') {
       if (tilt(P.S, P.A, ar) > 40) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
@@ -202,16 +278,21 @@ export function createEngine(exId, { aspect = 9/16 } = {}) {
       // inverted: wrists below hips, body near vertical
       if (!(P.W[1] > P.H[1] && P.H[1] > P.A[1] - 0.02) || tilt(P.W, P.A, ar) < 50) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
       const vdev = (a, c) => Math.atan2(Math.abs((c[0]-a[0])*ar), Math.abs(c[1]-a[1]) || 1e-6) * 180/Math.PI; // deg from vertical
-      const elb = m('elb', ang(P.S, P.E, P.W, ar), dt, 0.15);
-      const sh  = m('sh',  ang(P.H, P.S, P.E, ar), dt, 0.15);     // open shoulder ~180
-      const hip = m('hip', ang(P.S, P.H, P.A, ar), dt, 0.15);     // banana / pike
-      const lean = m('lean', vdev(P.W, P.A), dt, 0.2);            // whole line vs vertical
-      const segs = m('segs', Math.max(vdev(P.W, P.S), vdev(P.S, P.H), vdev(P.H, P.A)), dt, 0.2);
+      const A3 = P3 && (use3 || V === 'front');                     // joint angles in 3D unless filmed in profile
+      const J = (a, b, c) => A3 ? ang3(P3[a], P3[b], P3[c]) : ang(P[a], P[b], P[c], ar);
+      const VD = (a, c) => use3 ? vdev3(P3[a], P3[c]) : vdev(P[a], P[c]);  // front view: 2D = sideways lean
+      const elb = m('elb', J('S','E','W'), dt, 0.15);
+      const sh  = m('sh',  J('H','S','E'), dt, 0.15);     // open shoulder ~180
+      const hip = m('hip', J('S','H','A'), dt, 0.15);     // banana / pike
+      const lean = m('lean', VD('W','A'), dt, 0.2);            // whole line vs vertical
+      const segs = m('segs', Math.max(VD('W','S'), VD('S','H'), VD('H','A')), dt, 0.2);
       res.dbg = { elb, sh, hip, lean, segs };
-      live.push(flag('straight_arms', elb < LIM.hsElb, elb < LIM.hsElb + 5, dt) && 'straight_arms');
-      live.push(flag('open_shoulders', sh < LIM.hsSh, sh < LIM.hsSh + 5, dt) && 'open_shoulders');
-      live.push(flag('no_banana', hip < LIM.hsHip, hip < LIM.hsHip + 5, dt) && 'no_banana');
-      live.push(flag('hs_line', lean > LIM.hsLean || segs > 2*LIM.hsLean, lean > LIM.hsLean - 2 || segs > 2*LIM.hsLean - 4, dt) && 'hs_line');
+      const R = A3 ? 8 : 0;  // 3D joint angles read ~5-8 deg more bent on straight limbs
+      live.push(flag('straight_arms', elb < LIM.hsElb - R, elb < LIM.hsElb - R + 5, dt) && 'straight_arms');
+      live.push(flag('open_shoulders', sh < LIM.hsSh - R, sh < LIM.hsSh - R + 5, dt) && 'open_shoulders');
+      live.push(flag('no_banana', hip < LIM.hsHip - R, hip < LIM.hsHip - R + 5, dt) && 'no_banana');
+      const HL = LIM.hsLean + (use3 ? 6 : 0);  // 3D depth is noisier: wider tolerance off the side view
+      live.push(flag('hs_line', lean > HL || segs > 2*HL, lean > HL - 2 || segs > 2*HL - 4, dt) && 'hs_line');
     } else { // hollow: lying on back, shoulders and feet lifted, slight banana
       if (tilt(P.S, P.A, ar) > 45) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
       const footUp = m('fu', P.H[1] - P.A[1], dt), shUp = m('su', P.H[1] - P.S[1], dt);
@@ -219,13 +300,17 @@ export function createEngine(exId, { aspect = 9/16 } = {}) {
       live.push(flag('legs_up', footUp < 0.015, footUp < 0.025, dt) && 'legs_up');
       live.push(flag('shoulders_up', shUp < 0.005, shUp < 0.012, dt) && 'shoulders_up');
     }
-    const act = live.filter(Boolean); res.live = act;
+    const act = gate(live, res); res.live = act;
     st.holdTotal += dt;
     if (!act.length) { st.holdGood += dt; res.seg = 'good'; if (st.cue !== 'hold') setCue('hold', tMs); }
     else { res.seg = 'bad'; setCue(FAULTS.find(k => act.includes(k)), tMs); st.faultTime = st.faultTime || {}; for (const f of act) st.faultTime[f] = (st.faultTime[f]||0) + dt; }
     return finish(res, 'ok');
   }
 
+  // only report form checks that are valid from the current camera view
+  const ALL = new Set(Object.values(CHECKS[exId] || {}).flat());
+  function gate(live, res) { const ok = new Set(res.checks); if (ok.has('shoulders_over_wrists')) ok.add('shoulders_over_elbows');
+    return live.filter(f => f && (!ALL.has(f) && f !== 'shoulders_over_elbows' || ok.has(f))); }
   function finish(res, status) {
     res.status = status; res.reps = st.reps; res.bad = st.bad; res.attempts = st.attempts; res.phase = st.phase;
     res.holdGood = st.holdGood; res.holdTotal = st.holdTotal; res.lostT = st.lostT; res.faultTime = st.faultTime;
