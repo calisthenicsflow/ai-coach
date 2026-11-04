@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#060706">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Calisthenics Flow · AI Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- HOME -->
+<section id="home" class="screen active">
+  <header class="top">
+    <div class="brand"><span class="dot"></span>CALISTHENICS FLOW</div>
+    <button id="langBtn" class="chip">EN</button>
+  </header>
+  <h1 data-i="title">AI-тренер</h1>
+  <p class="sub" data-i="subtitle">Считает только чистые повторы. Видео не покидает телефон.</p>
+  <div id="exList" class="exlist"></div>
+  <div class="row target">
+    <span data-i="target">Цель</span>
+    <div class="stepper"><button id="tMinus">−</button><b id="tVal">20</b><button id="tPlus">+</button><span id="tUnit" class="unit"></span></div>
+  </div>
+  <div class="row toggles">
+    <button id="voiceBtn" class="chip on" data-i="voice">Голос</button>
+    <button id="camBtn" class="chip" data-i="camFront">Фронтальная камера</button>
+  </div>
+  <button id="startBtn" class="cta" data-i="start">Начать</button>
+  <p class="streak" id="homeStreak"></p>
+  <p class="foot">@calistenics_flow · Yuri Zubarev</p>
+</section>
+
+<!-- WORKOUT -->
+<section id="work" class="screen">
+  <canvas id="cv"></canvas>
+  <video id="vid" playsinline muted autoplay></video>
+  <div class="hud">
+    <div class="counter"><div id="cNum">0</div><div id="cOf" class="of"></div></div>
+    <div id="plus" class="plus">+1</div>
+    <div class="side">
+      <button id="muteBtn" class="ibtn" aria-label="voice">🔊</button>
+      <button id="quitBtn" class="ibtn" aria-label="close">✕</button>
+    </div>
+  </div>
+  <div id="calib" class="calib">
+    <div class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" class="bg"/><circle id="ringFg" cx="20" cy="20" r="17" class="fg"/></svg></div>
+    <div class="parts" id="parts"></div>
+    <p id="hint" class="hint"></p>
+  </div>
+  <div id="big" class="big"></div>
+  <div class="bottom">
+    <div id="cue" class="cue"></div>
+    <div id="dots" class="dots"></div>
+    <div class="barrow"><div class="bar"><i id="barFill"></i></div><button id="finishBtn" class="chip" data-i="finish">Завершить</button></div>
+  </div>
+  <div id="loading" class="loading"><div class="spin"></div><p data-i="loading">Загружаю модель…</p></div>
+</section>
+
+<!-- SUMMARY -->
+<section id="sum" class="screen">
+  <p class="eyebrow" id="sEyebrow"></p>
+  <div class="hero"><b id="sNum">0</b><span id="sLabel"></span></div>
+  <div class="grid">
+    <div class="card"><small data-i="technique">Техника</small><b id="sTech" class="lime">0%</b><span id="sTechW"></span></div>
+    <div class="card"><small data-i="uncounted">Не засчитано</small><b id="sBad">0</b><span data-i="uncountedSub">неглубоко, не до конца или провис</span></div>
+    <div class="card"><small data-i="streak">Серия</small><b id="sStreak">1</b><span data-i="streakSub">дней подряд</span></div>
+    <div class="card"><small data-i="time">Время</small><b id="sTime">0:00</b><span data-i="timeSub">вся тренировка</span></div>
+  </div>
+  <div id="sDots" class="dots lg"></div>
+  <p class="legend"><i class="g"></i><span data-i="clean">чисто</span> <i class="r"></i><span data-i="error">ошибка</span></p>
+  <button id="shareBtn" class="cta" data-i="share">Поделиться</button>
+  <div class="row two"><button id="againBtn" class="ghost" data-i="again">Ещё раз</button><button id="homeBtn" class="ghost" data-i="home">На главную</button></div>
+</section>
+<script type="module" src="app.js"></script>
+</body>
+</html>
