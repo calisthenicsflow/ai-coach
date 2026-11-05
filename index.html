@@ -8,17 +8,18 @@
 <meta name="theme-color" content="#060706">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%23060706%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%227%22 fill=%22%23C6FF00%22/%3E%3C/svg%3E">
 <title>Calisthenics Flow · AI Coach</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.1">
+<link rel="stylesheet" href="style.css?v=3.2">
 </head>
 <body>
 <!-- HOME -->
 <section id="home" class="screen active">
   <header class="top">
     <div class="brand"><span class="dot"></span>CALISTHENICS FLOW</div>
-    <button id="setBtn" class="ibtn sm" aria-label="settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    <div class="tbtns"><button id="langBtn" class="langbtn" aria-label="language"><b data-l="ru">RU</b><b data-l="en">EN</b></button><button id="setBtn" class="ibtn sm" aria-label="settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button></div>
   </header>
   <h1 data-i="title">AI-тренер</h1>
   <p class="sub" data-i="subtitle">Считает только чистые повторы. Видео не покидает телефон.</p>
@@ -33,7 +34,7 @@
   </div>
   <button id="startBtn" class="cta" data-i="start">Начать</button>
   <p class="streak" id="homeStreak"></p>
-  <p class="foot">@calistenics_flow · Yuri Zubarev · <span class="ver">v3.1</span></p>
+  <p class="foot">@calistenics_flow · Yuri Zubarev · <span class="ver">v3.2</span></p>
 </section>
 
 <!-- WORKOUT -->
@@ -101,9 +102,9 @@
   <p class="verline" id="modelNote">lite 5,8 MB · full 9,4 MB · heavy 30,7 MB</p>
   <label data-i="debug">Отладка (углы на экране)</label>
   <div class="seg"><button data-set="debug:true">ON</button><button data-set="debug:false">OFF</button></div>
-  <p class="verline"><span data-i="version">Версия</span> v3.1</p>
+  <p class="verline"><span data-i="version">Версия</span> v3.2</p>
   <div class="row2"><button id="previewBtn" class="chip" data-i="preview">Прослушать</button><button id="sheetClose" class="cta sm" data-i="close">Готово</button></div>
 </div></div>
-<script type="module" src="app.js?v=3.1"></script>
+<script type="module" src="app.js?v=3.2"></script>
 </body>
 </html>

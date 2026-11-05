@@ -98,3 +98,9 @@ h1{font:900 44px/1 Montserrat;margin:34px 0 10px;letter-spacing:-.01em}
 .tiplist{list-style:none;padding:0;margin:8px 0;display:grid;gap:8px}.tiplist li{display:flex;gap:10px;align-items:baseline}
 .tiplist small{min-width:118px;font:700 10px Montserrat;letter-spacing:.12em;text-transform:uppercase;color:rgba(244,244,238,.5)}.tiplist b{font:600 14px Manrope;color:#F4F4EE}
 .tipnote{font-size:12px;color:rgba(244,244,238,.6);margin:6px 0 14px}
+
+.sheet .panel{max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tbtns{display:flex;gap:8px;align-items:center}
+.langbtn{display:flex;border:1px solid rgba(244,244,238,.18);border-radius:12px;padding:3px;gap:2px;background:rgba(244,244,238,.05)}
+.langbtn b{font:800 12px Montserrat;letter-spacing:.08em;padding:8px 9px;border-radius:9px;color:rgba(244,244,238,.6)}
+.langbtn b.on{background:#C6FF00;color:#060706}

@@ -131,6 +131,7 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
     st.view = !v ? (Y > s0 ? 'side' : Y < 30 ? 'front' : 'd34')
       : v === 'side' ? (Y < sOut ? 'd34' : 'side') : v === 'front' ? (Y > 38 ? 'd34' : 'front') : (Y > sIn ? 'side' : Y < 25 ? 'front' : 'd34');
     if (forceView) st.view = forceView;
+    else if (exId === 'hollow') st.view = 'side';  // lying on the back: yaw from world z is meaningless, checks are side-only
     return st.view;
   }
 

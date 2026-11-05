@@ -1,6 +1,6 @@
-import { createEngine, visibility, EXERCISES, FAULTS, L } from './engine.js?v=3.1';
-import { CHECKS, BEST_VIEW } from './engine.js?v=3.1';
-export const APP_VERSION = '3.1';
+import { createEngine, visibility, EXERCISES, FAULTS, L } from './engine.js?v=3.2';
+import { CHECKS, BEST_VIEW } from './engine.js?v=3.2';
+export const APP_VERSION = '3.2';
 /* ---------- update guard: no service worker; always check version.json bypassing caches ---------- */
 if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => {
@@ -10,7 +10,7 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json())
 /* ---------- i18n ---------- */
 const T = {
   ru: { title:'AI-тренер', subtitle:'Считает только чистые повторы. Видео не покидает телефон.', target:'Цель', voice:'Голос', camFront:'Фронтальная камера', camBack:'Основная камера',
-    start:'Начать', finish:'Завершить', loading:'Загружаю модель…', technique:'Техника', uncounted:'Не засчитано', uncountedSub:'неглубоко, не до конца или ошибка формы',
+    start:'Начать', finish:'Завершить', loading:'Загружаю модель…', technique:'Техника', uncounted:'Не засчитано', uncountedSub:'неглубоко, не до конца или ошибка формы',uncountedSubHold:'время с ошибкой формы',
     streak:'Серия', streakSub:'дней подряд', time:'Время', timeSub:'вся тренировка', clean:'чисто', error:'ошибка', share:'Поделиться', again:'Ещё раз', home:'На главную',
     of:'из', sec:'сек', reps:'повт.', goalDone:'Цель выполнена', done:'Тренировка завершена', go:'Начали!', streakHome:n=>`Серия: ${n} дн. подряд`,
     techWord:p=>p>=90?'Отлично':p>=70?'Хорошо':'Есть над чем работать',
@@ -22,7 +22,7 @@ const T = {
     cue:{clean:'Чисто!',go_lower:'Ниже!',deeper:'Глубже: таз до колен',dip_lower:'Ниже: плечи до локтей',lockout:'Выпрями руки до конца',full_hang:'Полный вис внизу',chin_over:'Подбородок над перекладиной',no_kipping:'Без рывка ногами',no_swing:'Не раскачивайся',stand_tall:'Встань до конца',chest_up:'Грудь вверх',knees_out:'Колени наружу',hips_high:'Таз слишком высоко',hips_sag:'Таз провис',elbows_in:'Локти ближе к корпусу',hands_under:'Ладони под плечами',shoulders_over_elbows:'Плечи над локтями',shoulders_over_wrists:'Плечи над запястьями',legs_lower:'Опусти ноги ниже',legs_up:'Ноги от пола',shoulders_up:'Лопатки от пола',straight_arms:'Выпрями руки в локтях',open_shoulders:'Открой плечи',no_banana:'Не прогибайся',hs_line:'Выстрой линию',hold:'Держи',lost:'Не вижу тебя',pos:'Займи позицию'},
     settings:'Настройки',language:'Язык',voiceRu:'Голос (русский)',voiceEn:'Голос (английский)',male:'Мужской',female:'Женский',voiceOn:'Голосовые подсказки',preview:'Прослушать',close:'Готово',debug:'Отладка (углы на экране)',version:'Версия',
     model:'Модель позы',mLite:'Быстрая',mFull:'Стандарт',mHeavy:'Макс',fellBack:'Медленно — включаю быструю модель',
-    views:{side:'Сбоку',d34:'3/4',front:'Спереди'},better:'лучше',checksAll:'амплитуда',noChecks:'только амплитуда',
+    views:{side:'Сбоку',d34:'3/4',front:'Спереди'},better:'лучше',checksAll:'амплитуда',noChecks:'только время, форма не проверяется',
     ck:{hips_sag:'провис таза',hips_high:'таз высоко',hands_under:'ладони',elbows_in:'локти',chest_up:'грудь',knees_out:'колени',no_kipping:'без рывка',no_swing:'раскачка',shoulders_over_wrists:'плечи/кисти',shoulders_over_elbows:'плечи/локти',legs_lower:'ноги',legs_up:'ноги от пола',shoulders_up:'лопатки',straight_arms:'прямые руки',open_shoulders:'плечи',no_banana:'прогиб',hs_line:'линия'},
     tipTitle:'Поставь камеру так',gotIt:'Понятно, начать',tView:'Ракурс',tHeight:'Высота камеры',tDist:'Расстояние',tFrame:'Всё тело в кадре — от кистей до стоп',
     hFloor:'на полу',hWaist:'на уровне пояса',hChest:'на уровне груди',
@@ -31,7 +31,7 @@ const T = {
     say:{halfway:'Половина',last:'Последний!',done:'Готово!',summary:(n,p,b)=>`${n} чистых. Техника ${p} процентов.${b?` Не засчитано: ${b}.`:''}`},
   },
   en: { title:'AI Coach', subtitle:'Counts only clean reps. Video never leaves your phone.', target:'Target', voice:'Voice', camFront:'Front camera', camBack:'Back camera',
-    start:'Start', finish:'Finish', loading:'Loading model…', technique:'Technique', uncounted:'Not counted', uncountedSub:'too shallow, no lockout or form error',
+    start:'Start', finish:'Finish', loading:'Loading model…', technique:'Technique', uncounted:'Not counted', uncountedSub:'too shallow, no lockout or form error',uncountedSubHold:'time with a form error',
     streak:'Streak', streakSub:'days in a row', time:'Time', timeSub:'whole workout', clean:'clean', error:'error', share:'Share', again:'Again', home:'Home',
     of:'of', sec:'sec', reps:'reps', goalDone:'Goal complete', done:'Workout complete', go:'Go!', streakHome:n=>`Streak: ${n} day${n>1?'s':''} in a row`,
     techWord:p=>p>=90?'Excellent':p>=70?'Good':'Room to improve',
@@ -43,7 +43,7 @@ const T = {
     cue:{clean:'Clean!',go_lower:'Go lower',deeper:'Deeper: hips to knees',dip_lower:'Lower: shoulders to elbows',lockout:'Lock out arms',full_hang:'Full hang',chin_over:'Chin over bar',no_kipping:'No kipping',no_swing:'Stop swinging',stand_tall:'Stand tall',chest_up:'Chest up',knees_out:'Knees out',hips_high:'Hips too high',hips_sag:'Hips sagging',elbows_in:'Elbows in',hands_under:'Hands under shoulders',shoulders_over_elbows:'Shoulders over elbows',shoulders_over_wrists:'Shoulders over wrists',legs_lower:'Lower your legs',legs_up:'Lift your legs',shoulders_up:'Shoulders off floor',straight_arms:'Lock your elbows',open_shoulders:'Open shoulders',no_banana:'No banana back',hs_line:'Stack the line',hold:'Hold',lost:'Can\'t see you',pos:'Get in position'},
     settings:'Settings',language:'Language',voiceRu:'Voice (Russian)',voiceEn:'Voice (English)',male:'Male',female:'Female',voiceOn:'Voice cues',preview:'Preview',close:'Done',debug:'Debug (angles on screen)',version:'Version',
     model:'Pose model',mLite:'Fast',mFull:'Standard',mHeavy:'Max',fellBack:'Slow device — switching to fast model',
-    views:{side:'Side',d34:'3/4',front:'Front'},better:'best',checksAll:'range',noChecks:'range only',
+    views:{side:'Side',d34:'3/4',front:'Front'},better:'best',checksAll:'range',noChecks:'time only, form not checked',
     ck:{hips_sag:'hip sag',hips_high:'hips high',hands_under:'hands',elbows_in:'elbows',chest_up:'chest',knees_out:'knees',no_kipping:'no kip',no_swing:'swing',shoulders_over_wrists:'shoulders/wrists',shoulders_over_elbows:'shoulders/elbows',legs_lower:'legs',legs_up:'legs up',shoulders_up:'shoulders up',straight_arms:'straight arms',open_shoulders:'shoulders',no_banana:'banana',hs_line:'line'},
     tipTitle:'Set up the camera',gotIt:'Got it, start',tView:'View',tHeight:'Camera height',tDist:'Distance',tFrame:'Whole body in frame — hands to feet',
     hFloor:'on the floor',hWaist:'at waist height',hChest:'at chest height',
@@ -69,6 +69,7 @@ function applyLang() {
   document.querySelectorAll('[data-i]').forEach(el => { const v = t()[el.dataset.i]; if (typeof v === 'string') el.textContent = v; });
   $('camBtn').textContent = cfg.front ? t().camFront : t().camBack;
   $('voiceBtn').classList.toggle('on', cfg.voice);
+  document.querySelectorAll('#langBtn b').forEach(b => b.classList.toggle('on', b.dataset.l === cfg.lang));
   renderEx(); renderTarget(); renderStreak();
 }
 function renderEx() {
@@ -279,7 +280,7 @@ function showView(r) {
   if (!r.view) return; const key = r.view + '|' + (r.checks || []).join(',') + '|' + cfg.lang;
   if (key === W.checksKey) return; W.checksKey = key; const L = t(); const best = BEST_VIEW[W.ex];
   const cks = (r.checks || []).map(c => L.ck[c] || c);
-  $('viewChip').innerHTML = `<b>${L.views[r.view]}</b>${r.view !== best && !(best === 'front' && r.view !== 'front') ? ` <em>${L.better}: ${L.views[best]}</em>` : ''}<br><span>✓ ${[...(EXERCISES[W.ex].kind === 'hold' ? [] : [L.checksAll]), ...cks].join(' · ')}</span>`;
+  $('viewChip').innerHTML = `<b>${L.views[r.view]}</b>${r.view !== best && !(best === 'front' && r.view !== 'front') ? ` <em>${L.better}: ${L.views[best]}</em>` : ''}<br><span>✓ ${([...(EXERCISES[W.ex].kind === 'hold' ? [] : [L.checksAll]), ...cks].join(' · ') || L.noChecks)}</span>`;
   $('viewChip').className = 'vchip show' + (r.view !== best && best === 'side' ? ' warn' : '');
 }
 
@@ -389,6 +390,7 @@ function showSummary(res) {
   $('sNum').textContent = res.n; $('sLabel').textContent = t().ex[res.ex][1];
   $('sTech').textContent = res.tech + '%'; $('sTechW').textContent = t().techWord(res.tech);
   $('sBad').textContent = hold ? res.bad + ' ' + t().sec : res.bad;
+  document.querySelector('[data-i="uncountedSub"]').textContent = hold ? t().uncountedSubHold : t().uncountedSub;
   $('sStreak').textContent = getStreak(); const m = Math.floor(res.secs / 60), s = Math.round(res.secs % 60);
   $('sTime').textContent = `${m}:${String(s).padStart(2, '0')}`;
   $('sDots').innerHTML = res.attempts.map(a => `<i class="${a}"></i>`).join('');
@@ -412,6 +414,7 @@ document.querySelectorAll('#sheet [data-set]').forEach(b => b.onclick = () => {
   save(); applyLang(); renderSettings();
   if (k === 'ru' || k === 'en') { const l = cfg.lang; cfg.lang = k; say(['s_great'], k === 'ru' ? 'Отличная работа!' : 'Great work!', { force: true }); cfg.lang = l; }
 });
+$('langBtn').onclick = () => { cfg.lang = cfg.lang === 'ru' ? 'en' : 'ru'; save(); applyLang(); };
 $('setBtn').onclick = () => { unlockAudio(); renderSettings(); $('sheet').classList.add('show'); };
 $('sheetClose').onclick = () => $('sheet').classList.remove('show');
 $('sheet').onclick = e => { if (e.target.id === 'sheet') $('sheet').classList.remove('show'); };
