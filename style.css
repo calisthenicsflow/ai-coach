@@ -104,3 +104,26 @@ h1{font:900 44px/1 Montserrat;margin:34px 0 10px;letter-spacing:-.01em}
 .langbtn{display:flex;border:1px solid rgba(244,244,238,.18);border-radius:12px;padding:3px;gap:2px;background:rgba(244,244,238,.05)}
 .langbtn b{font:800 12px Montserrat;letter-spacing:.08em;padding:8px 9px;border-radius:9px;color:rgba(244,244,238,.6)}
 .langbtn b.on{background:#C6FF00;color:#060706}
+.dim{color:var(--mut);font-size:13px;line-height:1.5}
+.setchip{position:absolute;top:calc(env(safe-area-inset-top) + 126px);left:24px;font:800 13px Montserrat;letter-spacing:.1em;color:var(--lime);text-shadow:0 1px 8px #000;text-transform:uppercase}
+.recb{color:#FF4D5E;font-size:18px}.recb.on{background:#FF4D5E;color:#fff;border-color:#FF4D5E}
+.recind{position:absolute;top:calc(env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%);display:none;align-items:center;gap:6px;font:800 13px Montserrat;letter-spacing:.1em;color:#fff;background:rgba(255,77,94,.85);border-radius:999px;padding:6px 12px}
+.recind.show{display:flex}.recind i{width:8px;height:8px;border-radius:50%;background:#fff;animation:blink 1s infinite}@keyframes blink{50%{opacity:.2}}
+.overlay{position:fixed;inset:0;z-index:60;background:rgba(6,7,6,.9);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:26px}
+.overlay.show{display:flex}.obox{width:100%;max-width:420px;background:#0E100E;border:1px solid var(--line);border-radius:24px;padding:26px 22px;text-align:center;display:flex;flex-direction:column;gap:14px}
+.obox h2{font:800 28px Montserrat}.obox .cta{margin-top:6px}.ghost.wide{width:100%}
+.restnum{font:900 120px/1 Montserrat;color:var(--lime)}
+.restnext{font:700 14px Montserrat;letter-spacing:.06em;color:var(--fg)}
+.toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,20px);background:#C6FF00;color:#060706;font:700 14px Manrope;padding:12px 20px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s;z-index:80;max-width:90%;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.sets{margin:14px 0 0;display:grid;gap:6px}.setrow{display:flex;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13px}.setrow b{font:800 16px Montserrat}
+#recSave{display:none}#recSave.show{display:block}
+.histlist{max-height:40vh;overflow-y:auto;margin-top:12px;display:grid;gap:8px}
+.hrow{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 14px;gap:10px}
+.hrow b{font:700 14px Montserrat;display:block}.hrow span{font-size:11px;color:var(--mut)}
+.hval{text-align:right}.hval b{font:800 20px Montserrat}.hval span{display:block;font:700 12px Montserrat}
+.amber{color:var(--warn)}.red{color:var(--bad)}
+.chart{width:100%;height:auto;display:block;background:rgba(244,244,238,.03);border-radius:14px}
+#sum .row.two{margin-top:10px}
+
+.linkbtn{margin:14px auto 0;color:var(--mut);font:700 12px Montserrat;letter-spacing:.12em;text-transform:uppercase;text-decoration:underline;text-underline-offset:4px}
