@@ -1,6 +1,6 @@
-import { createEngine, visibility, EXERCISES, FAULTS, L } from './engine.js?v=3.3';
-import { CHECKS, BEST_VIEW } from './engine.js?v=3.3';
-export const APP_VERSION = '3.3';
+import { createEngine, visibility, EXERCISES, FAULTS, L } from './engine.js?v=3.4';
+import { CHECKS, BEST_VIEW } from './engine.js?v=3.4';
+export const APP_VERSION = '3.4';
 /* ---------- update guard: no service worker; always check version.json bypassing caches ---------- */
 if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => {
@@ -29,15 +29,15 @@ const T = {
     exSub:{pushup:'сбоку, телефон на полу',pullup:'сбоку или спереди',squat:'сбоку, во весь рост',dip:'сбоку, во весь рост',plank:'удержание, линия тела',hollow:'удержание, лодочка',handstand:'удержание, линия',lsit:'удержание, ноги прямые',row:'горизонтально, низкая перекладина',lunge:'сбоку, во весь рост'},
     hint:{pushup:'Телефон на полу <b>сбоку</b>, 1,5–2 м. Если не помещаешься — положи его горизонтально.',pullup:'Поставь телефон в 2–3 м, чтобы были видны перекладина и руки.',
       squat:'Телефон на уровне пояса <b>сбоку</b>, 2–3 м, видно с головы до стоп.',dip:'Телефон <b>сбоку</b> в 2–3 м, видно плечи, локти и таз.',plank:'Телефон на полу <b>сбоку</b>, 1,5–2 м.',hollow:'Телефон на полу <b>сбоку</b>, 1,5–2 м, лёжа на спине.',handstand:'Телефон <b>сбоку</b>, 2–3 м, видно всё тело — от кистей до стоп.',lsit:'Телефон <b>сбоку</b> на полу, 1,5–2 м. Руки на полу или на паралетсах.',row:'Телефон <b>сбоку</b>, 2–3 м, низкая перекладина или стол. Тело одной линией.',lunge:'Телефон на уровне пояса <b>сбоку</b>, 2–3 м, видно с головы до стоп.'},
-    cue:{clean:'Чисто!',go_lower:'Ниже!',deeper:'Глубже: таз до колен',dip_lower:'Ниже: плечи до локтей',lockout:'Выпрями руки до конца',full_hang:'Полный вис внизу',chin_over:'Подбородок над перекладиной',no_kipping:'Без рывка ногами',no_swing:'Не раскачивайся',stand_tall:'Встань до конца',chest_up:'Грудь вверх',knees_out:'Колени наружу',hips_high:'Таз слишком высоко',hips_sag:'Таз провис',elbows_in:'Локти ближе к корпусу',hands_under:'Ладони под плечами',shoulders_over_elbows:'Плечи над локтями',shoulders_over_wrists:'Плечи над запястьями',legs_lower:'Опусти ноги ниже',legs_up:'Ноги от пола',shoulders_up:'Лопатки от пола',straight_arms:'Выпрями руки в локтях',open_shoulders:'Открой плечи',no_banana:'Не прогибайся',hs_line:'Выстрой линию',legs_straight:'Выпрями ноги',hips_up_ls:'Подними таз',back_straight:'Спина прямая',knees_forward:'Колени над носками',lean_back:'Отклонись назад',rest:'Отдых',set:'Подход',pause:'Пауза. Нажми продолжить',hold:'Держи',lost:'Не вижу тебя',pos:'Займи позицию'},
+    cue:{clean:'Чисто!',go_lower:'Ниже!',deeper:'Глубже: таз до колен',dip_lower:'Ниже: плечи до локтей',lockout:'Выпрями руки до конца',full_hang:'Полный вис внизу',chin_over:'Подбородок над перекладиной',no_kipping:'Без рывка ногами',no_swing:'Не раскачивайся',stand_tall:'Встань до конца',chest_up:'Грудь вверх',knees_out:'Колени наружу',hips_high:'Таз слишком высоко',hips_sag:'Таз провис',elbows_in:'Локти ближе к корпусу',hands_under:'Ладони под плечами',shoulders_over_elbows:'Плечи над локтями',shoulders_over_wrists:'Плечи над запястьями',legs_lower:'Опусти ноги ниже',legs_up:'Ноги от пола',shoulders_up:'Лопатки от пола',straight_arms:'Выпрями руки в локтях',open_shoulders:'Открой плечи',no_banana:'Не прогибайся',hs_line:'Выстрой линию',legs_straight:'Выпрями ноги',hips_up_ls:'Подними таз',back_straight:'Спина прямая',knees_forward:'Колени над носками',lean_back:'Отклонись назад',rest:'Отдых',set:'Подход',pause:'Пауза. Нажми продолжить',hold:'Держи',lost:'Не вижу тебя',pos:'Займи позицию',lsit_position:'Подними таз и прямые ноги над полом',not_hollow:'Ляг на спину и оторви лопатки и ноги',not_plank:'Опустись в планку: тело одной линией',not_pullup:'Это австралийское подтягивание: повисни вертикально и оторви ноги',feet_support:'Убери ноги с опоры',knees_down:'Отожмись на носках, без колен на полу',whole_body:'Опускай всё тело, а не только таз или голову',knees_wide:'Колени над стопами, не разводи слишком широко',heels_up:'Не отрывай пятки',lunge_knees:'Согни обе ноги',lunge_step:'Сделай шаг вперёд или назад — это выпад',not_squat:'Это приседание, а не выпад: сделай шаг вперёд или назад',not_lunge:'Это выпад, а не приседание: ноги должны стоять рядом'},
     settings:'Настройки',language:'Язык',voiceRu:'Голос (русский)',voiceEn:'Голос (английский)',male:'Мужской',female:'Женский',voiceOn:'Голосовые подсказки',preview:'Прослушать',close:'Готово',debug:'Отладка (углы на экране)',version:'Версия',
     model:'Модель позы',mLite:'Быстрая',mFull:'Стандарт',mHeavy:'Макс',fellBack:'Медленно — включаю быструю модель',
     views:{side:'Сбоку',d34:'3/4',front:'Спереди'},better:'лучше',checksAll:'амплитуда',noChecks:'только время, форма не проверяется',
-    ck:{hips_sag:'провис таза',hips_high:'таз высоко',hands_under:'ладони',elbows_in:'локти',chest_up:'грудь',knees_out:'колени',no_kipping:'без рывка',no_swing:'раскачка',shoulders_over_wrists:'плечи/кисти',shoulders_over_elbows:'плечи/локти',legs_lower:'ноги',legs_up:'ноги от пола',shoulders_up:'лопатки',straight_arms:'прямые руки',open_shoulders:'плечи',no_banana:'прогиб',hs_line:'линия',legs_straight:'прямые ноги',hips_up_ls:'таз',back_straight:'спина',lockout:'локти'},
-    tipTitle:'Поставь камеру так',gotIt:'Понятно, начать',tView:'Ракурс',tHeight:'Высота камеры',tDist:'Расстояние',tFrame:'Всё тело в кадре — от кистей до стоп',
+    ck:{hips_sag:'провис таза',hips_high:'таз высоко',hands_under:'ладони',elbows_in:'локти',chest_up:'грудь',knees_out:'колени',no_kipping:'без рывка',no_swing:'раскачка',shoulders_over_wrists:'плечи/кисти',shoulders_over_elbows:'плечи/локти',legs_lower:'ноги',legs_up:'ноги от пола',shoulders_up:'лопатки',straight_arms:'прямые руки',open_shoulders:'плечи',no_banana:'прогиб',hs_line:'линия',legs_straight:'прямые ноги',hips_up_ls:'таз',back_straight:'спина',lockout:'локти',lsit_position:'позиция',not_hollow:'позиция',not_plank:'позиция',not_pullup:'вертикальный вис',feet_support:'опора ног',knees_down:'колени',whole_body:'всё тело',knees_wide:'ширина колен',heels_up:'пятки',lunge_knees:'оба колена',lunge_step:'шаг',not_squat:'шаг при выпаде',not_lunge:'симметрия ног'},
+    tipTitle:'Поставь камеру так',topDown:'ВИД СВЕРХУ',phoneLabel:'ТЕЛЕФОН',facingLabel:'НАПРАВЛЕНИЕ ЛИЦА',sideHit:'Камера видит БОК',frontHit:'Камера видит ЛИЦО',d34Hit:'Камера видит ЛИЦО И БОК',gotIt:'Понятно, начать',tView:'Ракурс',tHeight:'Высота камеры',tDist:'Расстояние',tFrame:'Всё тело в кадре — от кистей до стоп',
     hFloor:'на полу',hWaist:'на уровне пояса',hChest:'на уровне груди',hKnee:'на уровне колена',
-    vSide:'строго сбоку (профиль)',vFront:'спереди или сзади',
-    tipNote:{side:'Сбоку проверяется линия тела. Спереди — только локти/колени, остальное отключится.',front:'Спереди видно рывок и симметрию. Сбоку тоже можно — добавится контроль раскачки.'},
+    vSide:'строго сбоку (профиль)',vFront:'спереди или сзади',v34:'по диагонали (3/4)',
+    tipNote:{d34:'Вид сверху: телефон по диагонали — камера видит лицо и бок.',side:'Сбоку проверяется линия тела. Спереди — только локти/колени, остальное отключится.',front:'Спереди видно рывок и симметрию. Сбоку тоже можно — добавится контроль раскачки.'},
     say:{halfway:'Половина',last:'Последний!',done:'Готово!',summary:(n,p,b)=>`${n} чистых. Техника ${p} процентов.${b?` Не засчитано: ${b}.`:''}`},
   },
   en: { title:'AI Coach', subtitle:'Counts only clean reps. Video never leaves your phone.', target:'Target', voice:'Voice', camFront:'Front camera', camBack:'Back camera',
@@ -60,15 +60,15 @@ const T = {
     exSub:{pushup:'side view, phone on floor',pullup:'side or front view',squat:'side view, full body',dip:'side view, full body',plank:'hold, body line',hollow:'hold, banana shape',handstand:'hold, straight line',lsit:'hold, straight legs',row:'horizontal, low bar',lunge:'side view, full body'},
     hint:{pushup:'Phone on the floor, <b>side view</b>, 1.5–2 m away. If you don\'t fit, turn it landscape.',pullup:'Place the phone 2–3 m away so the bar and your arms are visible.',
       squat:'Phone at waist height, <b>side view</b>, 2–3 m, head to feet visible.',dip:'Phone <b>side view</b>, 2–3 m, shoulders, elbows and hips visible.',plank:'Phone on the floor, <b>side view</b>, 1.5–2 m.',hollow:'Phone on the floor, <b>side view</b>, 1.5–2 m, lying on your back.',handstand:'Phone <b>side view</b>, 2–3 m, full body visible — hands to feet.',lsit:'Phone on the floor, <b>side view</b>, 1.5–2 m. Hands on the floor or parallettes.',row:'Phone <b>side view</b>, 2–3 m, low bar or table. Keep your body in one line.',lunge:'Phone at waist height, <b>side view</b>, 2–3 m, head to feet visible.'},
-    cue:{clean:'Clean!',go_lower:'Go lower',deeper:'Deeper: hips to knees',dip_lower:'Lower: shoulders to elbows',lockout:'Lock out arms',full_hang:'Full hang',chin_over:'Chin over bar',no_kipping:'No kipping',no_swing:'Stop swinging',stand_tall:'Stand tall',chest_up:'Chest up',knees_out:'Knees out',hips_high:'Hips too high',hips_sag:'Hips sagging',elbows_in:'Elbows in',hands_under:'Hands under shoulders',shoulders_over_elbows:'Shoulders over elbows',shoulders_over_wrists:'Shoulders over wrists',legs_lower:'Lower your legs',legs_up:'Lift your legs',shoulders_up:'Shoulders off floor',straight_arms:'Lock your elbows',open_shoulders:'Open shoulders',no_banana:'No banana back',hs_line:'Stack the line',legs_straight:'Straighten your legs',hips_up_ls:'Lift your hips',back_straight:'Back straight',knees_forward:'Knees over toes',lean_back:'Lean back',rest:'Rest',set:'Set',pause:'Paused. Tap resume',hold:'Hold',lost:'Can\'t see you',pos:'Get in position'},
+    cue:{clean:'Clean!',go_lower:'Go lower',deeper:'Deeper: hips to knees',dip_lower:'Lower: shoulders to elbows',lockout:'Lock out arms',full_hang:'Full hang',chin_over:'Chin over bar',no_kipping:'No kipping',no_swing:'Stop swinging',stand_tall:'Stand tall',chest_up:'Chest up',knees_out:'Knees out',hips_high:'Hips too high',hips_sag:'Hips sagging',elbows_in:'Elbows in',hands_under:'Hands under shoulders',shoulders_over_elbows:'Shoulders over elbows',shoulders_over_wrists:'Shoulders over wrists',legs_lower:'Lower your legs',legs_up:'Lift your legs',shoulders_up:'Shoulders off floor',straight_arms:'Lock your elbows',open_shoulders:'Open shoulders',no_banana:'No banana back',hs_line:'Stack the line',legs_straight:'Straighten your legs',hips_up_ls:'Lift your hips',back_straight:'Back straight',knees_forward:'Knees over toes',lean_back:'Lean back',rest:'Rest',set:'Set',pause:'Paused. Tap resume',hold:'Hold',lost:'Can\'t see you',pos:'Get in position',lsit_position:'Lift your hips and straight legs off the floor',not_hollow:'Lie on your back and lift your shoulders and legs',not_plank:'Get into a plank: keep your body in one line',not_pullup:'That is a body row: hang vertically with feet off the floor',feet_support:'Take your feet off the support',knees_down:'Push up on your toes, knees off the floor',whole_body:'Lower your whole body, not just your hips or head',knees_wide:'Keep knees over feet, not too wide',heels_up:'Keep your heels down',lunge_knees:'Bend both knees',lunge_step:'Step forward or back for a lunge',not_squat:'That is a squat, not a lunge: step forward or back',not_lunge:'That is a lunge, not a squat: keep your feet together'},
     settings:'Settings',language:'Language',voiceRu:'Voice (Russian)',voiceEn:'Voice (English)',male:'Male',female:'Female',voiceOn:'Voice cues',preview:'Preview',close:'Done',debug:'Debug (angles on screen)',version:'Version',
     model:'Pose model',mLite:'Fast',mFull:'Standard',mHeavy:'Max',fellBack:'Slow device — switching to fast model',
     views:{side:'Side',d34:'3/4',front:'Front'},better:'best',checksAll:'range',noChecks:'time only, form not checked',
-    ck:{hips_sag:'hip sag',hips_high:'hips high',hands_under:'hands',elbows_in:'elbows',chest_up:'chest',knees_out:'knees',no_kipping:'no kip',no_swing:'swing',shoulders_over_wrists:'shoulders/wrists',shoulders_over_elbows:'shoulders/elbows',legs_lower:'legs',legs_up:'legs up',shoulders_up:'shoulders up',straight_arms:'straight arms',open_shoulders:'shoulders',no_banana:'banana',hs_line:'line',legs_straight:'straight legs',hips_up_ls:'hips',back_straight:'back',lockout:'elbows'},
-    tipTitle:'Set up the camera',gotIt:'Got it, start',tView:'View',tHeight:'Camera height',tDist:'Distance',tFrame:'Whole body in frame — hands to feet',
+    ck:{hips_sag:'hip sag',hips_high:'hips high',hands_under:'hands',elbows_in:'elbows',chest_up:'chest',knees_out:'knees',no_kipping:'no kip',no_swing:'swing',shoulders_over_wrists:'shoulders/wrists',shoulders_over_elbows:'shoulders/elbows',legs_lower:'legs',legs_up:'legs up',shoulders_up:'shoulders up',straight_arms:'straight arms',open_shoulders:'shoulders',no_banana:'banana',hs_line:'line',legs_straight:'straight legs',hips_up_ls:'hips',back_straight:'back',lockout:'elbows',lsit_position:'position',not_hollow:'position',not_plank:'position',not_pullup:'vertical hang',feet_support:'foot support',knees_down:'knees',whole_body:'whole body',knees_wide:'knee width',heels_up:'heels',lunge_knees:'both knees',lunge_step:'step',not_squat:'lunge step',not_lunge:'leg symmetry'},
+    tipTitle:'Set up the camera',topDown:'TOP-DOWN VIEW',phoneLabel:'PHONE',facingLabel:'FACING DIRECTION',sideHit:'Camera sees the SIDE',frontHit:'Camera sees the FRONT',d34Hit:'Camera sees FRONT + SIDE',gotIt:'Got it, start',tView:'View',tHeight:'Camera height',tDist:'Distance',tFrame:'Whole body in frame — hands to feet',
     hFloor:'on the floor',hWaist:'at waist height',hChest:'at chest height',hKnee:'at knee height',
-    vSide:'straight from the side (profile)',vFront:'from the front or back',
-    tipNote:{side:'Side view checks the body line. From the front only elbows/knees are checked, the rest is switched off.',front:'Front view shows kipping and symmetry. Side works too and adds swing control.'},
+    vSide:'straight from the side (profile)',vFront:'from the front or back',v34:'diagonal (3/4)',
+    tipNote:{d34:'Top-down: the phone is diagonal — the camera sees the front and side.',side:'Side view checks the body line. From the front only elbows/knees are checked, the rest is switched off.',front:'Front view shows kipping and symmetry. Side works too and adds swing control.'},
     say:{halfway:'Halfway',last:'Last one!',done:'Done!',summary:(n,p,b)=>`${n} clean reps. Technique ${p} percent.${b?` ${b} not counted.`:''}`},
   }
 };
@@ -188,51 +188,56 @@ let stream = null, raf = 0, W = null, wakeLock = null, startSeq = 0, starting = 
 const SETUP = { pushup:['side','floor','1,5–2'], plank:['side','floor','1,5–2'], hollow:['side','floor','1,5–2'],
   lsit:['side','floor','1,5–2'], row:['side','knee','2–3'], squat:['side','waist','2–3'], lunge:['side','waist','2–3'],
   dip:['side','waist','2–3'], handstand:['side','waist','2–3'], pullup:['front','chest','2–3'] };
-/* One drawing grammar for every card, 340x176, floor y=146:
-   phone on a tripod on the LEFT, lens facing RIGHT; dashed sight line to the person's head;
-   lime dashed rectangle = what the phone actually films. Side view => ONE profile figure facing the phone (left);
-   front view => TWO legs / TWO arms and both eyes, standing square to the lens. */
-const POSE = {
-  squat:   { up:1, head:[234,52], spine:'M234 66 L230 104', arms:'M234 70 L214 82', legs:'M230 104 L212 120 L224 146', ground:1 },
-  lunge:   { up:1, head:[228,50], spine:'M228 64 L230 102', arms:'M228 68 L224 96', legs:'M230 102 L204 118 L204 146 M230 102 L254 120 L266 146', ground:1 },
-  dip:     { up:1, head:[232,44], spine:'M232 58 L230 96', arms:'M232 62 L216 74 L216 92', legs:'M230 96 L234 122 L232 140', ground:1, prop:'M200 96 L266 96' },
-  handstand:{ up:0, head:[236,118], spine:'M236 106 L236 66', arms:'M236 106 L226 146 M236 106 L246 146', legs:'M236 66 L230 36 L228 16', ground:0 },
-  pushup:  { up:0, head:[204,102], spine:'M214 110 L252 118', arms:'M214 110 L208 146', legs:'M252 118 L280 142', ground:1 },
-  plank:   { up:0, head:[202,110], spine:'M212 118 L252 122', arms:'M212 118 L210 136 L202 146', legs:'M252 122 L280 144', ground:1 },
-  hollow:  { up:0, head:[206,124], spine:'M216 132 L248 140', arms:'M216 130 L244 120', legs:'M248 140 L282 116', ground:1 },
-  lsit:    { up:1, head:[252,64], spine:'M252 78 L254 112', arms:'M252 82 L242 112 L242 146', legs:'M254 112 L208 112 L206 118', ground:0 },
-  row:     { up:0, head:[200,124], spine:'M210 126 L250 108', arms:'M210 126 L214 92 M214 92 L244 92', legs:'M250 108 L278 142', ground:1, prop:'M196 88 L262 88 M262 88 L262 146' },
-  pullup:  { up:1, front:1, head:[232,52], spine:'M232 66 L232 100', arms:'M232 70 L214 56 L214 32 M232 70 L250 56 L250 32', legs:'M232 100 L224 122 L224 146 M232 100 L240 122 L240 146', ground:1, prop:'M196 28 L268 28' },
-};
+/* Top-down camera placement, common to every exercise.
+   The person faces UP in plan view. The camera is always WEST for a side view,
+   NORTH for a front view, and NORTH-WEST for 3/4. Thus the 90-degree cone can
+   never be confused with a rear view: its center ray hits side/front/diagonal. */
 function setupSvg(ex) {
-  const [view, h, dist] = SETUP[ex]; const p = POSE[ex]; const py = h === 'floor' ? 134 : h === 'knee' ? 108 : h === 'waist' ? 84 : 62;
+  const [view, height, dist] = SETUP[ex];
   const m = cfg.lang === 'ru' ? dist + ' м' : dist.replace(',', '.') + ' m';
-  const label = cfg.lang === 'ru' ? (view === 'side' ? 'ВИД СБОКУ' : 'ВИД СПЕРЕДИ') : (view === 'side' ? 'SIDE VIEW' : 'FRONT VIEW');
-  const [hx, hy] = p.head;
-  // sight line from the phone's lens to the head; film frustum around the whole body
-  return `<svg viewBox="0 0 340 176" class="tipsvg" role="img" aria-label="${label}">
-  <line x1="8" y1="147" x2="332" y2="147" stroke="rgba(244,244,238,.25)" stroke-width="2"/>
-  ${py < 130 ? `<path d="M40 ${py+16} L40 146 M28 146 L40 ${py+16} L52 146" stroke="rgba(244,244,238,.4)" stroke-width="2" fill="none"/>` : ''}
-  <path d="M52 ${py} L186 12 M52 ${py} L186 152" stroke="rgba(198,255,0,.3)" stroke-width="1.4" fill="none" stroke-dasharray="4 5"/>
-  <rect x="30" y="${py-12}" width="22" height="32" rx="4" fill="#0E100E" stroke="#C6FF00" stroke-width="2"/>
-  <circle cx="52" cy="${py+4}" r="4" fill="none" stroke="#C6FF00" stroke-width="2"/>
-  <rect x="182" y="12" width="128" height="140" rx="10" fill="none" stroke="rgba(198,255,0,.55)" stroke-width="1.5" stroke-dasharray="6 5"/>
-  ${p.prop ? `<path d="${p.prop}" stroke="rgba(244,244,238,.45)" stroke-width="4" stroke-linecap="round" fill="none"/>` : ''}
-  <path d="${p.spine} ${p.arms} ${p.legs}" stroke="#F4F4EE" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <circle cx="${hx}" cy="${hy}" r="9" fill="#F4F4EE"/>
-  ${p.front ? `<circle cx="${hx-3}" cy="${hy-1}" r="1.4" fill="#060706"/><circle cx="${hx+3}" cy="${hy-1}" r="1.4" fill="#060706"/>`
-    : `<path d="M${hx-9} ${hy-2} L${hx-14} ${hy+2} L${hx-9} ${hy+4} Z" fill="#F4F4EE"/><circle cx="${hx-4}" cy="${hy-2}" r="1.5" fill="#060706"/>`}
-  <path d="M52 ${py} L${hx} ${hy}" stroke="rgba(198,255,0,.75)" stroke-width="1.5" stroke-dasharray="5 4"/>
-  <path d="M62 164 L174 164 M62 164 l7 -3 M62 164 l7 3 M174 164 l-7 -3 M174 164 l-7 3" stroke="rgba(244,244,238,.5)" stroke-width="1.5"/>
-  <text x="118" y="161" text-anchor="middle" fill="rgba(244,244,238,.75)" font-size="11" font-family="Manrope">${m}</text>
-  <text x="248" y="168" text-anchor="middle" fill="#C6FF00" font-size="11" font-weight="700" letter-spacing="1" font-family="Montserrat">${label}</text>
-  <text x="30" y="${py-20}" fill="#C6FF00" font-size="9" font-weight="700" font-family="Montserrat">REC</text>
+  const label = t().views[view].toUpperCase();
+  const camera = view === 'front' ? [170, 40] : view === 'd34' ? [112, 57] : [43, 115];
+  const [cx, cy] = camera;
+  const aim = view === 'front' ? Math.PI / 2 : view === 'd34' ? Math.PI / 4 : 0;
+  const a1 = aim - Math.PI / 4, a2 = aim + Math.PI / 4, radius = 250;
+  const p1 = [cx + Math.cos(a1) * radius, cy + Math.sin(a1) * radius];
+  const p2 = [cx + Math.cos(a2) * radius, cy + Math.sin(a2) * radius];
+  const point = p => p.map(v => v.toFixed(1)).join(' ');
+  const hit = view === 'front' ? t().frontHit : view === 'd34' ? t().d34Hit : t().sideHit;
+  const heightLabel = t()['h' + height[0].toUpperCase() + height.slice(1)];
+  const hitY = view === 'side' ? 183 : 205;
+  const specsY = view === 'side' ? 208 : 228;
+  return `<svg viewBox="0 0 340 244" class="tipsvg" role="img" aria-label="${t().topDown}: ${label}" data-view="${view}">
+  <defs>
+    <marker id="faceArrow-${view}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#F4F4EE"/></marker>
+    <radialGradient id="cone-${view}"><stop stop-color="#C6FF00" stop-opacity=".27"/><stop offset="1" stop-color="#C6FF00" stop-opacity=".08"/></radialGradient>
+  </defs>
+  <text x="12" y="19" fill="rgba(244,244,238,.65)" font-size="10" font-weight="800" letter-spacing="1.4" font-family="Montserrat">${t().topDown}</text>
+  <text x="327" y="19" text-anchor="end" fill="#C6FF00" font-size="10" font-weight="800" letter-spacing=".7" font-family="Montserrat">${label}</text>
+  <circle cx="170" cy="115" r="62" fill="none" stroke="rgba(244,244,238,.13)" stroke-width="1" stroke-dasharray="3 5"/>
+  <path d="M${cx} ${cy} L${point(p1)} A${radius} ${radius} 0 0 1 ${point(p2)} Z" fill="url(#cone-${view})" stroke="rgba(198,255,0,.75)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <path d="M${cx} ${cy} L170 115" stroke="#C6FF00" stroke-width="1.5" stroke-dasharray="3 4"/>
+  <g aria-label="${t().phoneLabel}">
+    <rect x="${cx - 12}" y="${cy - 18}" width="24" height="36" rx="4" fill="#0E100E" stroke="#C6FF00" stroke-width="2"/>
+    <circle cx="${cx}" cy="${cy + 11}" r="2" fill="#C6FF00"/>
+    <circle cx="${cx}" cy="${cy - 11}" r="3" fill="none" stroke="#C6FF00" stroke-width="1.5"/>
+  </g>
+  <g aria-label="${t().facingLabel}">
+    <circle cx="170" cy="115" r="22" fill="#0E100E" stroke="#F4F4EE" stroke-width="3"/>
+    <path d="M148 128 Q170 144 192 128" fill="none" stroke="#F4F4EE" stroke-width="8" stroke-linecap="round"/>
+    <path d="M162 98 L158 102 M178 98 L182 102" stroke="#F4F4EE" stroke-width="3" stroke-linecap="round"/>
+    <path d="M170 93 L170 65" stroke="#F4F4EE" stroke-width="2.5" marker-end="url(#faceArrow-${view})"/>
+  </g>
+  <text x="245" y="65" text-anchor="middle" fill="#F4F4EE" font-size="9" font-weight="800" letter-spacing=".5" font-family="Montserrat">${t().facingLabel}</text>
+  <text x="170" y="${hitY}" text-anchor="middle" fill="#C6FF00" font-size="12" font-weight="800" font-family="Manrope">${hit}</text>
+  <text x="170" y="${specsY}" text-anchor="middle" fill="rgba(244,244,238,.7)" font-size="11" font-weight="700" font-family="Manrope">${t().phoneLabel} · ${heightLabel} · ${m} · 90°</text>
+
 </svg>`;
 }
 function showTip(ex) {
   const [view, h, d] = SETUP[ex]; const L = t();
   $('tipBody').innerHTML = setupSvg(ex) + `<ul class="tiplist">
-    <li><small>${L.tView}</small><b>${view === 'side' ? L.vSide : L.vFront}</b></li>
+    <li><small>${L.tView}</small><b>${view === 'd34' ? L.v34 : view === 'side' ? L.vSide : L.vFront}</b></li>
     <li><small>${L.tHeight}</small><b>${L['h' + h[0].toUpperCase() + h.slice(1)]}</b></li>
     <li><small>${L.tDist}</small><b>${cfg.lang === 'ru' ? d + ' м' : d.replace(',', '.') + ' m'}</b></li>
     <li><small>✓</small><b>${L.tFrame}</b></li></ul><p class="tipnote">${L.tipNote[view]}</p>`;
