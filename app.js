@@ -182,7 +182,7 @@ async function loadModel(model = cfg.model) {
 
 /* ---------- workout ---------- */
 const cv = $('cv'), ctx = cv.getContext('2d'), vid = $('vid');
-let stream = null, raf = 0, W = null, wakeLock = null;
+let stream = null, raf = 0, W = null, wakeLock = null, startSeq = 0, starting = false;
 
 /* ---------- setup tip card ---------- */
 const SETUP = { pushup:['side','floor','1,5–2'], plank:['side','floor','1,5–2'], hollow:['side','floor','1,5–2'],
@@ -243,7 +243,7 @@ $('tipGo').onclick = () => { $('tip').classList.remove('show'); startWorkout(); 
 $('tipX').onclick = () => $('tip').classList.remove('show');
 function preStart() { unlockAudio(); showTip(cfg.ex); }
 
-async function startWorkout(keepSession) { $('dbgOut').textContent = ''; $('viewChip').textContent = ''; $('viewChip').className = 'vchip';
+async function startWorkout(keepSession) { const myStart = ++startSeq; starting = true; $('dbgOut').textContent = ''; $('viewChip').textContent = ''; $('viewChip').className = 'vchip';
   if (!keepSession) SESS = { ex: cfg.ex, sets: nSets(), target: cfg.targets[cfg.ex], done: [], t0: 0 };
   armBackGuard();
   unlockAudio(); voiceOn = true; preloadVoice(cfg.targets[cfg.ex]); $('muteBtn').textContent = '🔊';
@@ -251,13 +251,18 @@ async function startWorkout(keepSession) { $('dbgOut').textContent = ''; $('view
   $('cue').className = 'cue'; $('dots').innerHTML = ''; $('barFill').style.width = '0';
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: cfg.front ? 'user' : 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } });
+    if (myStart !== startSeq) { stream.getTracks().forEach(tr => tr.stop()); return; }
     vid.srcObject = stream; await vid.play();
     try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {}
     await loadModel();
+    if (myStart !== startSeq) return;
   } catch (e) {
+    if (myStart !== startSeq) return;
+    starting = false; disarmBackGuard();
     $('loading').querySelector('p').textContent = (cfg.lang==='ru' ? 'Нет доступа к камере или модели: ' : 'Camera/model unavailable: ') + (e.message || e);
     return;
   }
+  starting = false;
   $('loading').classList.remove('show');
   const target = SESS.target;
   W = { flip: false, badT: 0, dms: 0, slowT: 0, lastNow: 0, checksKey: '', ex: cfg.ex, target: SESS.target, phase: 'calib', okSince: 0, engine: null, t0: 0, lastCue: null, lastCueSpoken: 0, said: {}, lastVideoT: -1, holdSpoken: 0, finished: false, attempts: [], paused: false, pauseT: 0, calT: 0 };
@@ -599,11 +604,12 @@ let backArmed = false;
 function armBackGuard() { if (backArmed) return; backArmed = true; try { history.pushState({ cfWork: 1 }, ''); } catch {} }
 function disarmBackGuard() { if (!backArmed) return; backArmed = false; try { if (history.state && history.state.cfWork) history.replaceState(null, ''); } catch {} }
 window.addEventListener('popstate', () => {
-  if ((W && !W.finished) || (SESS && $('rest').classList.contains('show'))) { backArmed = false; armBackGuard(); pauseWorkout(); }
+  if (starting || (W && !W.finished) || (SESS && $('rest').classList.contains('show'))) { backArmed = false; armBackGuard(); pauseWorkout(); }
   else backArmed = false;
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden && ((W && !W.finished) || (SESS && $('rest').classList.contains('show')))) pauseWorkout(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && (starting || (W && !W.finished) || (SESS && $('rest').classList.contains('show')))) pauseWorkout(); });
 function pauseWorkout() {
+  if (starting && !W) { $('pauseQ').textContent = t().exitQ; $('pauseSub').textContent = t().exitSub; $('pauseStay').textContent = t().exitStay; $('pauseGo').textContent = t().exitLeave; $('pause').classList.add('show'); return; }
   const resting = !W && SESS && $('rest').classList.contains('show');
   if (resting) {
     if (restPaused) return;
@@ -617,6 +623,7 @@ function pauseWorkout() {
   $('pause').classList.add('show');
 }
 function resumeWorkout() {
+  if (starting && !W) { $('pause').classList.remove('show'); return; }
   if (!W && restPaused && SESS) { restPaused = false; $('pause').classList.remove('show'); runRestTimer(); return; }
   if (!W) return;
   W.pauseT = (W.pauseT || 0) + (performance.now() - (W.pausedAt || performance.now()));
@@ -627,6 +634,7 @@ function resumeWorkout() {
 $('pauseStay').onclick = resumeWorkout;
 $('pauseGo').onclick = () => {
   $('pause').classList.remove('show');
+  if (starting && !W) { startSeq++; starting = false; SESS = null; stopCamera(); disarmBackGuard(); stopVoice(); show('home'); return; }
   if (W) { W.paused = false; finish(false); }
   else if (restPaused && SESS) { const done = SESS.done.slice(); stopRest(); if (done.length) finishFromRest(done); else { SESS = null; disarmBackGuard(); show('home'); } }
 };
@@ -685,7 +693,7 @@ $('histBtn').onclick = openHistory; $('histSum').onclick = openHistory;
 $('histClose').onclick = () => $('sheetHist').classList.remove('show');
 $('histClear').onclick = () => { localStorage.removeItem('cf_history'); openHistory(); };
 $('finishBtn').onclick = () => finish(false);
-$('quitBtn').onclick = () => { if (W && !W.finished) pauseWorkout(); else { stopRest(); SESS = null; disarmBackGuard(); stopCamera(); W = null; stopVoice(); applyLang(); show('home'); } };
+$('quitBtn').onclick = () => { if (starting && !W) pauseWorkout(); else if (W && !W.finished) pauseWorkout(); else { stopRest(); SESS = null; disarmBackGuard(); stopCamera(); W = null; stopVoice(); applyLang(); show('home'); } };
 $('muteBtn').onclick = () => { voiceOn = !voiceOn; $('muteBtn').textContent = voiceOn ? '🔊' : '🔈'; if (!voiceOn) stopVoice(); };
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
 document.addEventListener('touchend', unlockAudio, { once: true }); document.addEventListener('click', unlockAudio, { once: true });
