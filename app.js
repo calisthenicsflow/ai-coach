@@ -1,6 +1,6 @@
-import { createEngine, visibility, EXERCISES, FAULTS, L } from './engine.js?v=3.4';
-import { CHECKS, BEST_VIEW } from './engine.js?v=3.4';
-export const APP_VERSION = '3.4';
+import { createEngine, visibility, EXERCISES, FAULTS, L } from './engine.js?v=3.5';
+import { CHECKS, BEST_VIEW } from './engine.js?v=3.5';
+export const APP_VERSION = '3.5';
 /* ---------- update guard: no service worker; always check version.json bypassing caches ---------- */
 if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => {
@@ -72,14 +72,14 @@ const T = {
     say:{halfway:'Halfway',last:'Last one!',done:'Done!',summary:(n,p,b)=>`${n} clean reps. Technique ${p} percent.${b?` ${b} not counted.`:''}`},
   }
 };
-const EX_ORDER = ['pushup','pullup','squat','dip','row','lunge','plank','hollow','lsit','handstand'];
+const EX_ORDER = ['pushup','pullup','squat','dip','row','lunge','plank','hollow','lsit','handstand','muscleup','frontlever','backlever','planchelean','hanginglegraise','pistolsquat','pikepushup'];
 const BAD_CUES = new Set(FAULTS);
 
 const $ = id => document.getElementById(id);
 let S = {}; try { const v = JSON.parse(localStorage.getItem('cf_settings') || '{}'); if (v && typeof v === 'object' && !Array.isArray(v)) S = v; } catch {}
 for (const k of ['targets','sets']) if (!S[k] || typeof S[k] !== 'object' || Array.isArray(S[k])) S[k] = {};
-const cfg = { lang: S.lang || 'ru', ex: S.ex || 'pushup', voice: S.voice ?? true, front: S.front ?? false, voices: S.voices || { ru:'m', en:'m' }, targets: S.targets || { pushup:20, pullup:10, squat:20, dip:15, plank:60, hollow:30, handstand:30, lsit:20, row:15, lunge:20 }, debug: S.debug ?? false, model: S.model || 'full', noFb: !!S.noFb, sets: S.sets || {}, rest: S.rest ?? 60, level: S.level || 'std' };
-for (const [k,v] of Object.entries({pushup:20,pullup:10,squat:20,dip:15,plank:60,hollow:30,handstand:30,lsit:20,row:15,lunge:20})) cfg.targets[k] ??= v;
+const cfg = { lang: S.lang || 'ru', ex: S.ex || 'pushup', voice: S.voice ?? true, front: S.front ?? false, voices: S.voices || { ru:'m', en:'m' }, targets: S.targets || { pushup:20,pullup:10,squat:20,dip:15,plank:60,hollow:30,handstand:30,lsit:20,row:15,lunge:20,muscleup:5,frontlever:10,backlever:10,planchelean:20,hanginglegraise:10,pistolsquat:6,pikepushup:10 }, debug: S.debug ?? false, model: S.model || 'full', noFb: !!S.noFb, sets: S.sets || {}, rest: S.rest ?? 60, level: S.level || 'std' };
+for (const [k,v] of Object.entries({pushup:20,pullup:10,squat:20,dip:15,plank:60,hollow:30,handstand:30,lsit:20,row:15,lunge:20,muscleup:5,frontlever:10,backlever:10,planchelean:20,hanginglegraise:10,pistolsquat:6,pikepushup:10})) cfg.targets[k] ??= v;
 const nSets = () => Math.max(1, Math.min(10, cfg.sets[cfg.ex] || 1));
 const strictVal = () => cfg.level === 'hard' ? 1.15 : cfg.level === 'easy' ? 0.85 : 1;
 const save = () => localStorage.setItem('cf_settings', JSON.stringify(cfg));
@@ -182,12 +182,31 @@ async function loadModel(model = cfg.model) {
 
 /* ---------- workout ---------- */
 const cv = $('cv'), ctx = cv.getContext('2d'), vid = $('vid');
+/* v3.5 skill elements */
+const T35 = {
+  ru: { ex:{muscleup:['Выход силы','выходов силы'],frontlever:['Передний вис','сек в переднем висе'],backlever:['Задний вис','сек в заднем висе'],planchelean:['Планш-наклон','сек в наклоне'],hanginglegraise:['Подъёмы ног в висе','подъёмов ног'],pistolsquat:['Пистолетик','пистолетиков'],pikepushup:['Пайк-отжимания','пайк-отжиманий']},
+    exSub:{muscleup:'сбоку, строгий, без рывка',frontlever:'удержание, лицом вверх',backlever:'удержание, лицом вниз',planchelean:'удержание, плечи за кистями',hanginglegraise:'сбоку, ноги до горизонта',pistolsquat:'сбоку, на одной ноге',pikepushup:'сбоку, таз высоко'},
+    hint:{muscleup:'Телефон <b>сбоку</b> на уровне груди, 2–3 м, видно перекладину, кисти и всё тело. Спереди переход не виден.',frontlever:'Телефон <b>сбоку</b> на уровне груди, 2–3 м, видно от кистей до стоп.',backlever:'Телефон <b>сбоку</b> на уровне груди, 2–3 м, видно от кистей до стоп.',planchelean:'Телефон на полу <b>сбоку</b>, 1,5–2 м.',hanginglegraise:'Телефон <b>сбоку</b> на уровне груди, 2–3 м, видно перекладину и стопы.',pistolsquat:'Телефон на уровне пояса <b>сбоку</b>, 2–3 м, видно с головы до стоп.',pikepushup:'Телефон на полу <b>сбоку</b>, 1,5–2 м.'},
+    cue:{not_muscleup:'Это подтягивание, а не выход силы',mu_hang:'Начинай из полного виса, без прыжка',not_frontlever:'Это задний вис, а не передний',not_backlever:'Это передний вис, а не задний',lever_level:'Тело параллельно полу',lever_pike:'Раскрой таз, не сгибайся в поясе',not_planchelean:'Это планка, а не наклон в планш: подай плечи вперёд',not_legraise:'Это подъём коленей, а не ног: держи ноги прямыми',hlr_higher:'Выше: ноги до горизонта',not_pistol:'Это приседание, а не пистолетик',pistol_foot:'Свободная нога не касается пола',not_pike:'Это обычное отжимание, а не пайк: подними таз',pike_hips:'Держи таз высоко'},
+    ck:{not_muscleup:'переход',mu_hang:'старт из виса',not_frontlever:'лицом вверх',not_backlever:'лицом вниз',lever_level:'горизонт',lever_pike:'таз',not_planchelean:'наклон',not_legraise:'прямые ноги',not_pistol:'одна нога',pistol_foot:'стопа на весу',not_pike:'пайк',pike_hips:'таз высоко'},
+    tipEx:{muscleup:'Только сбоку видно переход над перекладиной. Спереди переход и прямые руки вверху не проверяются.',frontlever:'Сбоку видно горизонт, прямые руки, «банан» и сгиб в тазу. Задний вис отличается по направлению лица.',backlever:'Сбоку видно горизонт, прямые руки и прогиб. Передний вис отличается по направлению лица.',planchelean:'Сбоку видно, насколько плечи ушли за кисти. Без наклона — это просто планка.',hanginglegraise:'Сбоку видно высоту ног, прямые ноги и раскачку. Засчитывается при ногах до горизонта.',pistolsquat:'Сбоку видно глубину и свободную ногу. Держать ногу рукой можно.',pikepushup:'Сбоку видно высоту таза: обычное отжимание не засчитается.'} },
+  en: { ex:{muscleup:['Muscle-up','muscle-ups'],frontlever:['Front lever','sec front lever'],backlever:['Back lever','sec back lever'],planchelean:['Planche lean','sec planche lean'],hanginglegraise:['Hanging leg raises','leg raises'],pistolsquat:['Pistol squat','pistol squats'],pikepushup:['Pike push-ups','pike push-ups']},
+    exSub:{muscleup:'side view, strict, no kip',frontlever:'hold, face up',backlever:'hold, face down',planchelean:'hold, shoulders past wrists',hanginglegraise:'side view, legs to horizontal',pistolsquat:'side view, one leg',pikepushup:'side view, hips high'},
+    hint:{muscleup:'Phone <b>side view</b> at chest height, 2–3 m; bar, hands and whole body visible. The transition is not visible from the front.',frontlever:'Phone <b>side view</b> at chest height, 2–3 m, hands to feet visible.',backlever:'Phone <b>side view</b> at chest height, 2–3 m, hands to feet visible.',planchelean:'Phone on the floor, <b>side view</b>, 1.5–2 m.',hanginglegraise:'Phone <b>side view</b> at chest height, 2–3 m; bar and feet visible.',pistolsquat:'Phone at waist height, <b>side view</b>, 2–3 m, head to feet visible.',pikepushup:'Phone on the floor, <b>side view</b>, 1.5–2 m.'},
+    cue:{not_muscleup:'That is a pull-up, not a muscle-up',mu_hang:'Start from a dead hang, no jumping',not_frontlever:'That is a back lever, not a front lever',not_backlever:'That is a front lever, not a back lever',lever_level:'Keep your body parallel to the floor',lever_pike:'Open your hips, do not pike',not_planchelean:'That is a plank, not a planche lean: shift your shoulders forward',not_legraise:'That is a knee raise, not a leg raise: keep your legs straight',hlr_higher:'Higher: legs to horizontal',not_pistol:'That is a squat, not a pistol squat',pistol_foot:'Keep the free foot off the floor',not_pike:'That is a regular push-up, not a pike: lift your hips',pike_hips:'Keep your hips high'},
+    ck:{not_muscleup:'transition',mu_hang:'dead-hang start',not_frontlever:'face up',not_backlever:'face down',lever_level:'horizontal',lever_pike:'hips',not_planchelean:'lean',not_legraise:'straight legs',not_pistol:'one leg',pistol_foot:'free foot',not_pike:'pike',pike_hips:'hips high'},
+    tipEx:{muscleup:'Only a side view shows the transition over the bar. From the front the transition and top lockout are not checked.',frontlever:'Side view checks horizontal, straight arms, banana and piking. A back lever is told apart by which way you face.',backlever:'Side view checks horizontal, straight arms and arching. A front lever is told apart by which way you face.',planchelean:'Side view shows how far your shoulders pass your wrists. Without a lean it is just a plank.',hanginglegraise:'Side view checks leg height, straight legs and swing. A rep counts with legs at horizontal.',pistolsquat:'Side view checks depth and the free leg. Holding the free leg with a hand is fine.',pikepushup:'Side view checks hip height: a regular push-up is not counted.'} } };
+T35.ru.muSide = 'Поставь камеру сбоку — спереди переход над перекладиной не виден';
+T35.en.muSide = 'Place the camera to the side — the transition over the bar is not visible from the front';
+for (const lg of ['ru','en']) for (const [k,v] of Object.entries(T35[lg])) { if (typeof v === 'string') T[lg][k] = v; else Object.assign(T[lg][k] ??= {}, v); }
 let stream = null, raf = 0, W = null, wakeLock = null, startSeq = 0, starting = false;
 
 /* ---------- setup tip card ---------- */
 const SETUP = { pushup:['side','floor','1,5–2'], plank:['side','floor','1,5–2'], hollow:['side','floor','1,5–2'],
   lsit:['side','floor','1,5–2'], row:['side','knee','2–3'], squat:['side','waist','2–3'], lunge:['side','waist','2–3'],
-  dip:['side','waist','2–3'], handstand:['side','waist','2–3'], pullup:['front','chest','2–3'] };
+  dip:['side','waist','2–3'], handstand:['side','waist','2–3'], pullup:['front','chest','2–3'],
+  muscleup:['side','chest','2–3'], frontlever:['side','chest','2–3'], backlever:['side','chest','2–3'], planchelean:['side','floor','1,5–2'],
+  hanginglegraise:['side','chest','2–3'], pistolsquat:['side','waist','2–3'], pikepushup:['side','floor','1,5–2'] };
 /* Top-down camera placement, common to every exercise.
    The person faces UP in plan view. The camera is always WEST for a side view,
    NORTH for a front view, and NORTH-WEST for 3/4. Thus the 90-degree cone can
@@ -240,7 +259,7 @@ function showTip(ex) {
     <li><small>${L.tView}</small><b>${view === 'd34' ? L.v34 : view === 'side' ? L.vSide : L.vFront}</b></li>
     <li><small>${L.tHeight}</small><b>${L['h' + h[0].toUpperCase() + h.slice(1)]}</b></li>
     <li><small>${L.tDist}</small><b>${cfg.lang === 'ru' ? d + ' м' : d.replace(',', '.') + ' m'}</b></li>
-    <li><small>✓</small><b>${L.tFrame}</b></li></ul><p class="tipnote">${L.tipNote[view]}</p>`;
+    <li><small>✓</small><b>${L.tFrame}</b></li></ul><p class="tipnote">${L.tipEx?.[ex] || L.tipNote[view]}</p>`;
   $('tipTitle').textContent = `${L.ex[ex][0]} · ${L.tipTitle}`; $('tipGo').textContent = L.gotIt;
   $('tip').classList.add('show');
 }
@@ -306,7 +325,7 @@ function draw(lm, color, angle) {
     ctx.beginPath(); ctx.arc(m.x(p[0]), m.y(p[1]), 5 * dpr, 0, 7); ctx.fill(); ctx.lineWidth = 2.5 * dpr; ctx.stroke(); }
   if (angle != null) { // joint angle label at primary joint
     const ex = EXERCISES[W.ex]; const left = lm[11][3] + lm[13][3] >= lm[12][3] + lm[14][3];
-    const j = ex.primary === 'knee' ? (left ? 25 : 26) : (left ? 13 : 14); const p = lm[j];
+    const j = ex.primary === 'knee' ? (left ? 25 : 26) : ex.primary === 'hip' ? (left ? 23 : 24) : (left ? 13 : 14); const p = lm[j];
     ctx.font = `800 ${15 * dpr}px Montserrat`; ctx.fillStyle = '#F4F4EE'; ctx.fillText(Math.round(angle) + '°', m.x(p[0]) + 12 * dpr, m.y(p[1]) + 5 * dpr);
   }
 }
@@ -359,8 +378,8 @@ function loop() {
   if (W.phase === 'calib') { recFrame(now); return calib(lm, now); }
   if (W.phase === 'count') { draw(lm, COLORS.idle); return; }
   const r = W.engine.update(lm, now, wl); showView(r);
-  if (W.ex === 'handstand' && r.view && r.view !== 'side' && r.status === 'ok') {
-    const c = $('cue'); c.textContent = t().hsSide; c.className = 'cue show warn'; clearTimeout(showCue.t); showCue.t = setTimeout(() => c.classList.remove('show'), 1600);
+  if ((W.ex === 'handstand' || W.ex === 'muscleup') && r.view && r.view !== 'side' && r.status === 'ok') {
+    const c = $('cue'); c.textContent = W.ex === 'muscleup' ? t().muSide : t().hsSide; c.className = 'cue show warn'; clearTimeout(showCue.t); showCue.t = setTimeout(() => c.classList.remove('show'), 1600);
   }
   const color = r.status === 'lost' ? COLORS.lost : r.status === 'pos' ? COLORS.idle : (r.cue && BAD_CUES.has(r.cue) ? (r.seg === 'warn' ? COLORS.warn : COLORS.bad) : COLORS[r.seg] || COLORS.good);
   draw(lm, color, r.angle);
