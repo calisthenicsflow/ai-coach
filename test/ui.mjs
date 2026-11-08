@@ -112,6 +112,12 @@ try {
   }));
   if (home.h1 !== 'Your pocket trainer' || home.lang || home.voice || home.cam || !home.gear || home.ex !== 17) fail('home', home);
   else ok('home', home);
+  const discover = await page.evaluate(() => {
+    const card = document.getElementById('buildOpen').getBoundingClientRect();
+    return { top: card.top, bottom: card.bottom, h: innerHeight, headerBuilder: !!document.getElementById('buildBtn'), text: document.querySelector('#buildOpen b').textContent };
+  });
+  if (discover.headerBuilder || discover.top < 40 || discover.bottom > discover.h || discover.top > 340) fail('builder-visible', discover);
+  else ok('builder-visible', discover);
   await shot('home-390x844');
 
   await vp(320, 568);
@@ -267,8 +273,9 @@ try {
   }));
   if (active.phase !== 'active' || active.calib) fail('active', active);
   else ok('active', active);
-  if (!/1080p\/60/.test(active.chip) || !/1280×720/.test(active.chip) || !/30 fps/.test(active.chip)) fail('quality-actual', active);
-  else ok('quality-actual', active.chip);
+  const askedLine = await page.evaluate(() => document.getElementById('qNow').textContent);
+  if (!/1080p\/60/.test(askedLine) || !/1280×720/.test(active.chip) || !/30/.test(active.chip)) fail('quality-actual', { chip: active.chip, asked: askedLine });
+  else ok('quality-actual', { chip: active.chip, asked: askedLine });
   const hud = await page.evaluate(() => {
     const box = el => { const r = el.getBoundingClientRect(); return { top:r.top, right:r.right, bottom:r.bottom, left:r.left, w:r.width, h:r.height }; };
     const rec = box(document.getElementById('recBtn'));
@@ -402,6 +409,59 @@ try {
   const hist = await page.evaluate(() => JSON.parse(localStorage.cf_history || '[]').map(x => x.ex));
   if (hist.join() !== 'pushup,squat,plank') fail('history', hist);
   else ok('history', hist);
+  await page.click('#homeBtn');
+  await page.evaluate(() => {
+    const t0 = performance.now();
+    const ar = 1280 / 720;
+    const ang = (a, b, c) => {
+      const v1x = (a[0] - b[0]) * ar, v1y = a[1] - b[1], v2x = (c[0] - b[0]) * ar, v2y = c[1] - b[1];
+      const d = Math.hypot(v1x, v1y) * Math.hypot(v2x, v2y) || 1e-9;
+      return Math.acos(Math.max(-1, Math.min(1, (v1x * v2x + v1y * v2y) / d))) * 180 / Math.PI;
+    };
+    const lm = (knee) => {
+      const a = Array.from({ length: 33 }, () => [0.5, 0.5, 0, 0.05]);
+      const hip = [0.42, 0.48], ankle = [0.42, 0.90], sh = [0.42, 0.22];
+      let best = [0.55, 0.7], bd = 1e9;
+      for (let x = 0.42; x <= 0.78; x += 0.004) {
+        const k = [x, 0.7], d = Math.abs(ang(hip, k, ankle) - knee);
+        if (d < bd) { bd = d; best = k; }
+      }
+      const put = (i, x, y) => { a[i] = [x, y, 0, 0.99]; };
+      for (const side of [0, 1]) {
+        const dx = side ? 0.012 : 0;
+        put(side ? 12 : 11, sh[0] + dx, sh[1]);
+        put(side ? 14 : 13, sh[0] + dx, sh[1] + 0.12);
+        put(side ? 16 : 15, sh[0] + dx, sh[1] + 0.24);
+        put(side ? 24 : 23, hip[0] + dx, hip[1]);
+        put(side ? 26 : 25, best[0] + dx, best[1]);
+        put(side ? 28 : 27, ankle[0] + dx, ankle[1]);
+      }
+      put(0, sh[0], sh[1] - 0.06);
+      return a;
+    };
+    window.__CF_MOCK_POSE__.frame = () => {
+      const p = ((performance.now() - t0) / 1000) % 3.2;
+      const down = p < 1.6 ? p / 1.6 : (3.2 - p) / 1.6;
+      return { lm: lm(172 - down * 100), wl: null };
+    };
+    document.querySelector('#exList .ex[data-k="squat"]').click();
+  });
+  await page.evaluate(() => document.getElementById('startBtn').scrollIntoView({ block: 'center' }));
+  await page.click('#startBtn');
+  await page.waitForSelector('#tip.show');
+  await page.click('#tipGo');
+  await page.waitForFunction(() => document.querySelectorAll('#dots i').length >= 2, { timeout: 20000 });
+  await delay(300);
+  await shot('workout-dots');
+  const dots = await page.evaluate(() => ({
+    n: document.querySelectorAll('#dots i').length,
+    good: document.querySelectorAll('#dots i.g').length,
+    bad: document.querySelectorAll('#dots i.r').length,
+    phase: window.__CF.debug.phase,
+    panels: document.querySelectorAll('.statpanel').length,
+  }));
+  if (dots.phase !== 'active' || dots.panels !== 1 || dots.n < 2) fail('dots', dots);
+  else ok('dots', dots);
 } catch (e) {
   console.error('UNCAUGHT', e);
   try { await shot('failure'); } catch {}
