@@ -95,8 +95,12 @@ export function visibility(lm) { // which body groups are visible (either side)
 // plank: real clean side-view planks read offT ~+0.04 and armV ~+4 deg (MediaPipe bias), so limits are centred there
 export const LIM = { offC:0.04, off:0.12, armC:4, arm:10, pbody:164, hsElb:155, hsSh:155, hsHip:163, hsLean:8, hands:0.42, kipPull:140, kipDip:115, chest:45 };
 
-export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = null, euro = [1.5, 4], hold = 400, strict = 1 } = {}) {
-  const SL = strict >= 1.15 ? 1.15 : strict <= 0.85 ? 0.85 : strict; // per-user threshold calibration: >1 = stricter
+// Always strict. Older easy/normal choices are ignored. A few degrees of landmark noise are absorbed
+// by the enter/stay hysteresis inside flag(), not by loosening the level.
+export const STRICT = 1.15;
+
+export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = null, euro = [1.5, 4], hold = 400, strict: _ignoredStrict = STRICT } = {}) {
+  const SL = STRICT;
   const K = { tol: 1/SL, depth: SL };
   const ex = EXERCISES[exId]; const ar = aspect; // ar = width/height of frame
   const st = { phase:'top', reps:0, bad:0, attempts:[], minA:999, maxA:0, ascMax:0, faults:new Set(),
@@ -138,11 +142,25 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
   function setCue(c, t) { st.cue = c; st.cueT = t; }
   // smoothed metric
   function m(key, x, dt, tau=0.15) { if (x == null || !isFinite(x)) return st.M[key]; return st.M[key] = ema(st.M[key], x, dt, tau); }
-  // hysteresis fault: turns on after `enter` holds 0.35 s, off after `stay` fails 0.3 s
-  function flag(key, enter, stay, dt, onT=0.35, offT=0.3) {
-    const f = st.F[key] || (st.F[key] = { on:false, t:0 });
-    if (!f.on) { f.t = enter ? f.t + dt : 0; if (f.t >= onT) { f.on = true; f.t = 0; } }
-    else { f.t = stay ? 0 : f.t + dt; if (f.t >= offT) { f.on = false; f.t = 0; } }
+  // Posture fault with a short onset and a longer release.
+  // enter === null means the joints are unknown: withhold judgment, never label it wrong.
+  // Default onset is ~140 ms (near-immediate, still more than one noisy frame).
+  function flag(key, enter, stay, dt, onT=0.14, offT=0.24) {
+    const f = st.F[key] || (st.F[key] = { on:false, t:0, since:null });
+    if (enter == null) { f.on = false; f.t = 0; f.since = null; return false; }
+    if (!f.on) {
+      if (enter) {
+        if (f.since == null) f.since = st.lastT;
+        f.t += dt;
+        if (f.t >= onT) {
+          f.on = true; f.t = 0;
+          st.lastFaultLatency = Math.max(0, st.lastT - (f.since ?? st.lastT));
+        }
+      } else { f.t = 0; f.since = null; }
+    } else {
+      f.t = stay ? 0 : f.t + dt;
+      if (f.t >= offT) { f.on = false; f.t = 0; f.since = null; }
+    }
     return f.on;
   }
   function clearFlags(keys) { for (const k of keys) if (st.F[k]) st.F[k] = { on:false, t:0 }; }
@@ -182,7 +200,7 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
   }
 
   function update(lm0, tMs, wl0) {
-    const dt = st.lastT==null ? 0.033 : Math.max(0.001, Math.min(0.5, (tMs-st.lastT)/1000)); st.lastT = tMs;
+    const dt = st.lastT==null ? 0.033 : Math.max(0.001, Math.min(0.5, (tMs-st.lastT)/1000)); st.lastT = tMs; st.dt = dt;
     const ev = []; const res = { events:ev, seg:'good', angle:null, live:[] };
     if (!lm0) { st.lostT += dt; return finish(res, 'lost'); }
     const [lm, wl] = prep(lm0, wl0, dt, tMs); res.lm = lm;
@@ -245,7 +263,7 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
       res.sym = { ankle:sym.ankle, knee:sym.knee, hip:sym.hip, aStep, kStep, aWide };
       if (exId === 'squat') live.push(flag('not_lunge', stepped, stepStay, dt, 0.3) && 'not_lunge');
       if (exId === 'lunge') {
-        live.push(flag('lunge_step', working && a < 142 && !stepped && !st.repStep, working && a < 145 && !stepStay && !st.repStep, dt, 0.45) && 'lunge_step');
+        live.push(flag('lunge_step', working && a < 142 && !stepped && !st.repStep, working && a < 145 && !stepStay && !st.repStep, dt, 0.28) && 'lunge_step');
         const hasStep = stepped || st.repStep;
         if (stepped) st.repStep = true;
         live.push(flag('not_squat', working && a < 130 && !hasStep, working && a < 135 && !hasStep && !stepStay, dt, 0.3) && 'not_squat');
@@ -256,7 +274,7 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
       live.push(...bodyFaults(dt, st.smBody, off, LIM.pbody - (K.tol-1)*20, LIM.pbody+5 - (K.tol-1)*20));
       // hands under shoulders (checked near lockout): horizontal wrist offset vs arm length
       const hw = m('hands', Math.abs(P.W[0]-P.S[0])*ar / dist(P.S, P.W), dt, 0.25);
-      if (a > 140) live.push(flag('hands_under', hw > LIM.hands, hw > LIM.hands-0.08, dt, 0.6) && 'hands_under');
+      if (a > 140) live.push(flag('hands_under', hw > LIM.hands, hw > LIM.hands-0.08, dt, 0.22) && 'hands_under');
       // elbow flare (side view): at the bottom, upper arm foreshortened and ~perpendicular to torso
       const sh = ang(P.H, P.S, P.E, ar), ratio = dist(P.S, P.E) / dist(P.E, P.W);
       res.dbg = { hw, sh, ratio };
@@ -346,7 +364,7 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
       if (bothLegs) {
         const thighs = [tilt(P.H2,P.K2,ar),tilt(P.H3,P.K3,ar)], shins=[tilt(P.K2,P.A2,ar),tilt(P.K3,P.A3,ar)];
         const kneeDown = thighs.filter(x=>x<35).length && shins.filter(x=>x>65).length;
-        live.push(flag('knees_down',kneeDown,kneeDown,dt,0.4) && 'knees_down');
+        live.push(flag('knees_down',kneeDown,kneeDown,dt,0.18) && 'knees_down');
       }
     }
     // Support/horizontal-body errors are only asserted when the relevant feet are visible.
@@ -364,12 +382,12 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
       const supported=lowFeet && Math.min(...thighs)<55 && Math.max(...thighs)<75 && Math.min(...shins)<75;
       const inclined=torsoMax<80 && torsoMin<72 && Math.min(...thighs)<42 && Math.min(...shins)<48;
       const wrongRow=horizontal || supported || inclined;
-      live.push(flag('not_pullup',wrongRow,wrongRow,dt,0.4) && 'not_pullup');
+      live.push(flag('not_pullup',wrongRow,wrongRow,dt,0.22) && 'not_pullup');
     }
     if (exId === 'dip' && bothLegs) {
       const thighs=[tilt(P.H2,P.K2,ar),tilt(P.H3,P.K3,ar)], shins=[tilt(P.K2,P.A2,ar),tilt(P.K3,P.A3,ar)];
       const supported = thighs.some(x=>x<30) && shins.some(x=>x>60);
-      live.push(flag('feet_support',supported,supported,dt,0.4) && 'feet_support');
+      live.push(flag('feet_support',supported,supported,dt,0.18) && 'feet_support');
     }
     if (exId === 'hanginglegraise') {
       const elb = m('hElb', J('S','E','W'), dt, 0.15);
@@ -394,7 +412,7 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
     if (exId === 'pikepushup') {
       const pk = m('pike', J('S','H','A'), dt, 0.15);
       res.dbg = { pike:pk };
-      live.push(flag('not_pike', pk > 150, pk > 142, dt, 0.4) && 'not_pike');
+      live.push(flag('not_pike', pk > 150, pk > 142, dt, 0.2) && 'not_pike');
       live.push(flag('pike_hips', working && pk > 125 && pk <= 150, working && pk > 118, dt, 0.3) && 'pike_hips');
       const arm = dist(P.S,P.E) + dist(P.E,P.W);
       st.pk = st.pk || { top:P.N[1], low:P.N[1] };
@@ -541,11 +559,11 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
     };
     if (exId === 'plank') {
       const wrongPose = wrongHoldPose(60,55);
-      const wrong = flag('not_plank',wrongPose,wrongPose,dt,0.4);
+      const wrong = flag('not_plank',wrongPose,wrongPose,dt,0.18);
       if (wrong) return finish(res,'ok',[],['not_plank'],dt);
       if (wrongPose) return finish(res,'pos');
       if (tilt(P.S, P.A, ar) > 40) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
-      if (tilt(P.S,P.H,ar) > 60) live.push(flag('not_plank',true,true,dt,0.4) && 'not_plank');
+      if (tilt(P.S,P.H,ar) > 60) live.push(flag('not_plank',true,true,dt,0.18) && 'not_plank');
       live.push(...bodyFaults(dt, b, off, 166, 170));
       // support point: straight-arm plank -> wrist, forearm plank -> elbow
       const elb = m('elb', ang(P.S, P.E, P.W, ar), dt, 0.2);
@@ -608,7 +626,7 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
       const banana = bellyUp ? off > 0 : off <= 0;
       live.push(flag('no_banana', !tuck && b < 160 && banana, !tuck && b < 166 && banana, dt) && 'no_banana');
       live.push(flag('lever_pike', !tuck && b < 160 && !banana, !tuck && b < 166 && !banana, dt) && 'lever_pike');
-      live.push(flag('lever_level', lvl > 15, lvl > 11, dt, 0.4) && 'lever_level');
+      live.push(flag('lever_level', lvl > 15, lvl > 11, dt, 0.18) && 'lever_level');
     } else if (exId === 'planchelean') {
       if (!(P.W[1] > P.S[1] + 0.03) || tilt(P.S, P.A, ar) > 50) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
       const J = (a, b, c) => use3 ? ang3(P3[a], P3[b], P3[c]) : ang(P[a], P[b], P[c], ar);
@@ -617,37 +635,50 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
       const dir = Math.sign(P.S[0] - P.H[0]) || 1;                       // + toward the head
       const lean = m('lean', Math.atan2((P.S[0] - P.W[0]) * ar * dir, Math.abs(P.W[1] - P.S[1]) || 1e-6) * 180/Math.PI, dt, 0.2);
       res.dbg = { elb, lean, b, off };
-      live.push(flag('not_planchelean', lean < 14, lean < 17, dt, 0.4) && 'not_planchelean');
+      live.push(flag('not_planchelean', lean < 14, lean < 17, dt, 0.18) && 'not_planchelean');
       live.push(flag('straight_arms', elb < 158 - R, elb < 164 - R, dt) && 'straight_arms');
       live.push(...bodyFaults(dt, b, off, 152, 157));   // a slightly hollow lean is fine; only clear pike or sag
     } else if (exId === 'lsit') {
       // seated L: hands on the floor beside the hips, hips off the ground, legs up and straight
       const onFloor = P.A[1] >= P.W[1] - 0.015 && P.H[1] >= P.W[1] - 0.06;
-      if (flag('lsit_position',onFloor,onFloor,dt,0.4)) return finish(res,'ok',[],['lsit_position'],dt);
-      if (!(P.H[1] < P.A[1] + 0.06) || P.W[1] < P.H[1] - 0.1) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
-      if (tilt(P.S,P.H,ar) < 25 || P.H[1] > P.W[1] + 0.08) live.push(flag('lsit_position',true,true,dt,0.4) && 'lsit_position');
+      if (flag('lsit_position',onFloor,onFloor,dt,0.16)) return finish(res,'ok',[],['lsit_position'],dt);
+      // Hands have to be the support. Legs may sit a little above or below horizontal;
+      // that tilt is judged below instead of being thrown out as "not in position".
+      if (P.W[1] < P.H[1] - 0.1) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
+      if (tilt(P.S,P.H,ar) < 25 || P.H[1] > P.W[1] + 0.08) live.push(flag('lsit_position',true,true,dt,0.16) && 'lsit_position');
       // In a profile L-sit the far leg can be projected as a short, bent limb while the near leg is straight.
       // Evaluate both visible legs and use the extended one; using only the shoulder-side leg caused false 'straighten legs'.
       const legs = ['l','r'].map(side => ({ H:side === 'l' ? P.H2 : P.H3, K:side === 'l' ? P.K2 : P.K3, A:side === 'l' ? P.A2 : P.A3,
         W:side === 'l' ? P.W2 : P.W3 }))
-        .filter(q => [q.H,q.K,q.A].every(p => p && (p[3] ?? 1) >= VIS));
+        .filter(q => [q.H,q.K,q.A].every(p => p && (p[3] ?? 0) >= 0.6));
+      if (!legs.length) {
+        // Legs are not confidently visible: do not call the L wrong.
+        flag('legs_straight', null, null, dt); flag('legs_up', null, null, dt);
+        flag('legs_lower', null, null, dt); flag('hips_up_ls', null, null, dt);
+        res.dbg = { unknown: 1 };
+      } else {
       const ka = q => ang(q.H,q.K,q.A,ar);
-      const leg = legs.length ? legs.reduce((best,q) => ka(q) > ka(best) ? q : best, legs[0]) : P;
+      const leg = legs.reduce((best,q) => ka(q) > ka(best) ? q : best, legs[0]);
       const knee = m('kn', ka(leg), dt, 0.15);
       // In a true L the hips and feet are above the hands/floor line. Positive values mean sagging below it.
       const lift = m('lift', P.H[1] - P.W[1], dt, 0.15);
-      const hup  = m('hup', leg.A[1] - leg.W[1], dt, 0.15);
-      res.dbg = { knee, lift, hup };
-      live.push(flag('legs_straight', knee < 150, knee < 158, dt) && 'legs_straight');
-      live.push(flag('hips_up_ls', lift > 0.04, lift > 0.02, dt) && 'hips_up_ls');
-      live.push(flag('legs_up', hup > 0.04, hup > 0.02, dt) && 'legs_up');
+      // 0° = thighs horizontal. A small tilt is still an L; a large one is not.
+      const horiz = tilt(leg.H, leg.A, ar);
+      const ankleBelow = leg.A[1] > leg.H[1] + 0.015;
+      const ankleAbove = leg.A[1] + 0.015 < leg.H[1];
+      res.dbg = { knee, lift, horiz };
+      live.push(flag('legs_straight', knee < 158, knee < 165, dt, 0.16, 0.24) && 'legs_straight');
+      live.push(flag('hips_up_ls', lift > 0.055, lift > 0.03, dt, 0.16, 0.24) && 'hips_up_ls');
+      live.push(flag('legs_up', horiz > 24 && ankleBelow, horiz > 18 && ankleBelow, dt, 0.16, 0.24) && 'legs_up');
+      live.push(flag('legs_lower', horiz > 32 && ankleAbove, horiz > 26 && ankleAbove, dt, 0.16, 0.24) && 'legs_lower');
+      }
     } else { // hollow: lying on back, shoulders and feet lifted, slight banana
       const wrongPose = wrongHoldPose(55,55);
-      const wrong = flag('not_hollow',wrongPose,wrongPose,dt,0.4);
+      const wrong = flag('not_hollow',wrongPose,wrongPose,dt,0.18);
       if (wrong) return finish(res,'ok',[],['not_hollow'],dt);
       if (wrongPose) return finish(res,'pos');
       if (tilt(P.S, P.A, ar) > 45) { st.F = {}; res.seg='idle'; return finish(res, 'pos'); }
-      if (tilt(P.S,P.H,ar) > 55) live.push(flag('not_hollow',true,true,dt,0.4) && 'not_hollow');
+      if (tilt(P.S,P.H,ar) > 55) live.push(flag('not_hollow',true,true,dt,0.18) && 'not_hollow');
       const footUp = m('fu', P.H[1] - P.A[1], dt), shUp = m('su', P.H[1] - P.S[1], dt);
       live.push(flag('legs_lower', b < 140, b < 146, dt) && 'legs_lower');
       live.push(flag('legs_up', footUp < 0.015, footUp < 0.025, dt) && 'legs_up');
@@ -666,10 +697,25 @@ export function createEngine(exId, { aspect = 9/16, smooth = null, forceView = n
     return live.filter(f => f && (!ALL.has(f) && f !== 'shoulders_over_elbows' || ok.has(f))); }
   function finish(res, status, events = [], faults = [], dt = 0) {
     if (events.length) res.events.push(...events);
-    if (faults.length) { st.holdTotal += dt; st.faultTime = st.faultTime || {}; res.live = faults; res.seg = 'bad'; setCue(faults[0],st.lastT); for (const f of faults) st.faultTime[f]=(st.faultTime[f]||0)+dt; }
+    if (status === 'pos') st.posT = (st.posT || 0) + (st.dt || dt || 0.033);
+    else if (status !== 'lost') st.posT = 0;
+    res.strict = STRICT;
+    res.faultLatency = st.lastFaultLatency ?? null;
+    if (status === 'lost' || status === 'pos') {
+      res.live = [];
+      res.seg = status === 'lost' ? 'lost' : 'idle';
+      res.status = status;
+      res.reps = st.reps; res.bad = st.bad; res.attempts = st.attempts; res.phase = st.phase;
+      res.holdGood = st.holdGood; res.holdTotal = st.holdTotal; res.lostT = st.lostT; res.faultTime = st.faultTime;
+      // Not visible, or not in the exercise, is never a technique fault.
+      res.cue = status === 'lost' ? (st.lostT > 0.45 ? 'lost' : null) : ((st.posT || 0) > 0.2 ? 'pos' : null);
+      return res;
+    }
+    if (faults.length) { st.holdTotal += dt; st.faultTime = st.faultTime || {}; res.live = faults; res.seg = 'bad'; setCue(faults[0], st.lastT); for (const f of faults) st.faultTime[f]=(st.faultTime[f]||0)+dt; }
     res.status = status; res.reps = st.reps; res.bad = st.bad; res.attempts = st.attempts; res.phase = st.phase;
     res.holdGood = st.holdGood; res.holdTotal = st.holdTotal; res.lostT = st.lostT; res.faultTime = st.faultTime;
-    res.cue = st.cue && (st.lastT - st.cueT) < 1500 ? st.cue : null;
+    const active = res.live && res.live.length ? FAULTS.find(k => res.live.includes(k)) : null;
+    res.cue = active || null;
     return res;
   }
   return { update, state: st, ex };
