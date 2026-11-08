@@ -268,14 +268,15 @@ try {
     phase: window.__CF.debug.phase,
     calib: document.getElementById('calib').classList.contains('show'),
     num: document.getElementById('cNum').textContent,
-    chip: document.getElementById('qChip').textContent,
+    chipGone: !document.getElementById('qChip'),
+    hud: document.querySelector('.hud').innerText,
     ex: document.getElementById('statEx').textContent,
   }));
   if (active.phase !== 'active' || active.calib) fail('active', active);
   else ok('active', active);
   const askedLine = await page.evaluate(() => document.getElementById('qNow').textContent);
-  if (!/1080p\/60/.test(askedLine) || !/1280×720/.test(active.chip) || !/30/.test(active.chip)) fail('quality-actual', { chip: active.chip, asked: askedLine });
-  else ok('quality-actual', { chip: active.chip, asked: askedLine });
+  if (!active.chipGone || /fps/i.test(active.hud) || !/1080p\/60/.test(askedLine) || !/1280×720/.test(askedLine)) fail('quality-actual', { hud: active.hud, asked: askedLine, chipGone: active.chipGone });
+  else ok('quality-actual', { hud: active.hud, asked: askedLine });
   const hud = await page.evaluate(() => {
     const box = el => { const r = el.getBoundingClientRect(); return { top:r.top, right:r.right, bottom:r.bottom, left:r.left, w:r.width, h:r.height }; };
     const rec = box(document.getElementById('recBtn'));
@@ -410,6 +411,9 @@ try {
   if (hist.join() !== 'pushup,squat,plank') fail('history', hist);
   else ok('history', hist);
   await page.click('#homeBtn');
+  await page.click('#setBtn');
+  await page.click('[data-set="lang:ru"]');
+  await page.click('#sheetClose');
   await page.evaluate(() => {
     const t0 = performance.now();
     const ar = 1280 / 720;
@@ -460,8 +464,32 @@ try {
     phase: window.__CF.debug.phase,
     panels: document.querySelectorAll('.statpanel').length,
   }));
+  const ruHud = await page.evaluate(() => ({
+    rear: document.getElementById('camRear').textContent,
+    front: document.getElementById('camFront').textContent,
+    hud: document.querySelector('.hud').innerText,
+  }));
   if (dots.phase !== 'active' || dots.panels !== 1 || dots.n < 2) fail('dots', dots);
   else ok('dots', dots);
+  if (ruHud.rear !== 'Сзади' || ruHud.front !== 'Спереди' || /fps/i.test(ruHud.hud)) fail('ru-hud', ruHud);
+  else ok('ru-hud', ruHud);
+  const clipsBefore = await page.evaluate(() => window.__CF.clips.length);
+  await page.evaluate(() => document.getElementById('recBtn').click());
+  await page.waitForFunction(() => (window.__CF.stats().recording?.frames || 0) > 6, { timeout: 6000 });
+  await page.evaluate(() => document.getElementById('camRear').click());
+  await delay(500);
+  const still = await page.evaluate(() => window.__CF.stats().recording);
+  await page.evaluate(() => window.__CF.completeSetForTest());
+  await page.waitForFunction(() => document.getElementById('saveDlg').classList.contains('show'), { timeout: 8000 });
+  await shot('save-at-end');
+  const ended = await page.evaluate(() => ({
+    dlg: document.getElementById('saveDlg').classList.contains('show'),
+    btn: document.getElementById('recSave').classList.contains('show'),
+    sum: document.getElementById('sum').classList.contains('active'),
+    n: window.__CF.clips.length,
+  }));
+  if (!still || still.state !== 'recording' || ended.n !== clipsBefore + 1 || !ended.dlg || !ended.btn || !ended.sum) fail('save-end', { still, ended, clipsBefore });
+  else ok('save-end', ended);
 } catch (e) {
   console.error('UNCAUGHT', e);
   try { await shot('failure'); } catch {}

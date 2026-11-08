@@ -1,9 +1,9 @@
-import { createEngine, visibility, EXERCISES, FAULTS, STRICT, BEST_VIEW } from './engine.js?v=4.1';
-import { createFeedbackGate } from './feedback.js?v=4.1';
-import { migrateSettings, videoConstraints, qualityReport, emptyClip, rateFromStamps } from './settings.js?v=4.1';
-import { sanitizeRoutine, moveItem, afterSet, summarize } from './routine.js?v=4.1';
+import { createEngine, visibility, EXERCISES, FAULTS, STRICT, BEST_VIEW } from './engine.js?v=4.2';
+import { createFeedbackGate } from './feedback.js?v=4.2';
+import { migrateSettings, videoConstraints, qualityReport, emptyClip, rateFromStamps } from './settings.js?v=4.2';
+import { sanitizeRoutine, moveItem, afterSet, summarize } from './routine.js?v=4.2';
 
-export const APP_VERSION = '4.1';
+export const APP_VERSION = '4.2';
 const BAD_CUES = new Set(FAULTS);
 if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => {
@@ -54,7 +54,7 @@ const T = {
     vSide:'строго сбоку (профиль)', vFront:'спереди или сзади', v34:'по диагонали (3/4)',
     tipNote:{d34:'Телефон по диагонали: в кадре и лицо, и бок.',side:'Камера стоит сбоку и смотрит в плечо. Спереди линия тела не проверяется.',front:'Камера стоит перед лицом. Сбоку добавится контроль раскачки.'},
     say:{halfway:'Половина',last:'Последний!',done:'Готово!',summary:(n,p,b)=>`${n} чистых. Техника ${p} процентов.${b?` Не засчитано: ${b}.`:''}`},
-    camRear:'Основная', camFront:'Фронт', camera:'Камера', soundOn:'Звук включён', soundOff:'Звук выключен',
+    camRear:'Сзади', camFront:'Спереди', camera:'Камера', soundOn:'Звук включён', soundOff:'Звук выключен',
     camRes:'Разрешение', camFps:'Кадры в секунду',
     camNote:'Браузер не забирает настройки приложения «Камера». Здесь запрос 720p или 1080p и 30 или 60 кадров. Ниже — что реально открылось. Если режима нет, будет ближайший.',
     qAsk:'запрос', qFallback:'это ближайший доступный режим, не запрошенный',
@@ -306,7 +306,7 @@ function startWorker(model) {
   return new Promise((resolve, reject) => {
     if (poseWorker) { try { poseWorker.terminate(); } catch {} poseWorker = null; }
     poseReady = false;
-    const w = new Worker(new URL('./pose-worker.js?v=4.1', import.meta.url), { type: 'module' });
+    const w = new Worker(new URL('./pose-worker.js?v=4.2', import.meta.url), { type: 'module' });
     poseWorker = w;
     const to = setTimeout(() => { try { w.terminate(); } catch {} reject(new Error('pose worker timeout')); }, 12000);
     w.onmessage = (e) => {
@@ -368,32 +368,36 @@ function setupSvg(ex) {
   const m = cfg.lang === 'ru' ? dist + ' м' : dist.replace(',', '.') + ' m';
   const heightLabel = L['h' + height[0].toUpperCase() + height.slice(1)];
   const hit = view === 'front' ? L.frontHit : view === 'd34' ? L.d34Hit : L.sideHit;
-  const cam = view === 'front' ? [188, 34] : view === 'd34' ? [86, 52] : [52, 118];
-  const aim = view === 'front' ? [188, 92] : view === 'd34' ? [170, 96] : [166, 108];
-  const face = view !== 'side', side = view !== 'front';
-  const ang = Math.atan2(aim[1] - cam[1], aim[0] - cam[0]);
-  const wedge = (spread) => {
-    const R = 210, a1 = ang - spread, a2 = ang + spread;
-    const p = a => [cam[0] + Math.cos(a) * R, cam[1] + Math.sin(a) * R];
-    const p1 = p(a1), p2 = p(a2);
-    return `M${cam[0]} ${cam[1]} L${p1[0].toFixed(1)} ${p1[1].toFixed(1)} A${R} ${R} 0 0 1 ${p2[0].toFixed(1)} ${p2[1].toFixed(1)} Z`;
-  };
-  return `<svg viewBox="0 0 340 210" class="tipsvg" role="img" aria-label="${L.topDown}: ${label}" data-view="${view}">
-    <text x="16" y="22" fill="rgba(244,244,238,.45)" font-size="10" font-weight="700" letter-spacing="1.6" font-family="Montserrat">${L.topDown}</text>
-    <text x="324" y="22" text-anchor="end" fill="#C6FF00" font-size="12" font-weight="800" font-family="Montserrat">${label}</text>
-    <path d="${wedge(0.22)}" fill="rgba(198,255,0,.14)" stroke="none"/>
-    <g aria-label="${L.phoneLabel}" transform="translate(${cam[0]} ${cam[1]})">
-      <rect x="-9" y="-16" width="18" height="32" rx="4" fill="#0E100E" stroke="#C6FF00" stroke-width="1.6"/>
-      <circle cx="0" cy="-8" r="2.2" fill="none" stroke="#C6FF00" stroke-width="1.4"/>
+  const side = view === 'side';
+  const phone = side ? 'translate(58 92)' : view === 'd34' ? 'translate(78 58) rotate(40)' : 'translate(160 28)';
+  const person = side
+    ? `<g transform="translate(196 36)" aria-label="${L.facingLabel}">
+        <circle cx="0" cy="16" r="15" fill="#0E100E" stroke="#F4F4EE" stroke-width="2.4"/>
+        <path d="M12 16 h12" stroke="#C6FF00" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M0 32 v42" stroke="#F4F4EE" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M0 46 h-18" stroke="#C6FF00" stroke-width="3" stroke-linecap="round"/>
+        <path d="M0 74 l-16 42 M0 74 l14 42" stroke="#F4F4EE" stroke-width="2.4" stroke-linecap="round"/>
+      </g>`
+    : `<g transform="translate(160 78)" aria-label="${L.facingLabel}">
+        <circle cx="0" cy="0" r="16" fill="#0E100E" stroke="#C6FF00" stroke-width="2.4"/>
+        <circle cx="-5" cy="-2" r="1.6" fill="#F4F4EE"/><circle cx="5" cy="-2" r="1.6" fill="#F4F4EE"/>
+        <path d="M0 16 v40" stroke="#F4F4EE" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M-22 28 h44" stroke="#F4F4EE" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M0 56 l-16 40 M0 56 l16 40" stroke="#F4F4EE" stroke-width="2.4" stroke-linecap="round"/>
+      </g>`;
+  const arrow = side
+    ? `<path d="M78 92 H150" stroke="#C6FF00" stroke-width="1.6" stroke-linecap="round"/>`
+    : `<path d="M160 52 V70" stroke="#C6FF00" stroke-width="1.6" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 0 320 188" class="tipsvg" role="img" aria-label="${hit}" data-view="${view}">
+    <text x="14" y="20" fill="rgba(244,244,238,.45)" font-size="10" font-weight="700" letter-spacing="1.4" font-family="Montserrat">${label}</text>
+    ${person}
+    <g aria-label="${L.phoneLabel}" transform="${phone}">
+      <rect x="-10" y="-18" width="20" height="36" rx="4" fill="#0E100E" stroke="#C6FF00" stroke-width="1.6"/>
+      <circle cx="0" cy="-8" r="2.3" fill="none" stroke="#C6FF00" stroke-width="1.4"/>
     </g>
-    <g aria-label="${L.facingLabel}" transform="translate(188 108)">
-      <rect x="-11" y="2" width="22" height="36" rx="11" fill="#0E100E" stroke="#F4F4EE" stroke-width="2"/>
-      <line x1="-22" y1="6" x2="22" y2="6" stroke="${side ? '#C6FF00' : 'rgba(244,244,238,.8)'}" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="0" cy="-16" r="13" fill="#0E100E" stroke="${face ? '#C6FF00' : '#F4F4EE'}" stroke-width="2"/>
-      <circle cx="-4" cy="-17" r="1.3" fill="#F4F4EE"/><circle cx="4" cy="-17" r="1.3" fill="#F4F4EE"/>
-    </g>
-    <text x="170" y="176" text-anchor="middle" fill="#C6FF00" font-size="14" font-weight="700" font-family="Manrope">${hit}</text>
-    <text x="170" y="196" text-anchor="middle" fill="rgba(244,244,238,.55)" font-size="11" font-weight="600" font-family="Manrope">${heightLabel} · ${m}</text>
+    ${arrow}
+    <text x="160" y="162" text-anchor="middle" fill="#C6FF00" font-size="15" font-weight="700" font-family="Manrope">${hit}</text>
+    <text x="160" y="180" text-anchor="middle" fill="rgba(244,244,238,.5)" font-size="11" font-weight="600" font-family="Manrope">${heightLabel} · ${m}</text>
   </svg>`;
 }
 function showTip(ex) {
@@ -411,10 +415,8 @@ function showQuality(q) {
   lastQuality = q || null;
   const asked = `${q?.askedRes || cfg.camRes}p/${q?.askedFps || cfg.camFps}`;
   const got = q?.label || '—';
+  // Negotiated size and frame rate stay in settings. The training view does not show them.
   $('qNow').textContent = `${t().qAsk} ${asked} → ${got}` + (q?.fallback ? ' · ' + t().qFallback : '');
-  const el = $('qChip');
-  el.textContent = q?.label || '';
-  el.classList.toggle('fb', !!q?.fallback);
 }
 async function openCamera() {
   const video = videoConstraints({ front: cfg.front, res: cfg.camRes, fps: cfg.camFps });
@@ -1063,6 +1065,7 @@ async function toggleRec() {
       }
       const url = URL.createObjectURL(blob);
       clips.push({ blob, url, w: mr.w, h: mr.h, frames: mr.frames, fps, elapsed, audio: mr.hasAudio, mic: mr.mic, q: mr.q, overlay: cfg.recOverlay !== false });
+      if ($('recSave')) $('recSave').classList.add('show');
       openSave(clips.length - 1, { pause: !!(W && !W.finished) });
     };
     mr.onerror = () => { toast(t().recErr); if (rec === mr) stopRec(); };
