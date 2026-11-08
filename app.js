@@ -1,13 +1,18 @@
-import { createEngine, visibility, EXERCISES, FAULTS, STRICT, BEST_VIEW } from './engine.js?v=4.0';
-import { createFeedbackGate } from './feedback.js?v=4.0';
-import { migrateSettings, videoConstraints, qualityReport, emptyClip, rateFromStamps } from './settings.js?v=4.0';
-import { sanitizeRoutine, moveItem, afterSet, summarize } from './routine.js?v=4.0';
+import { createEngine, visibility, EXERCISES, FAULTS, STRICT, BEST_VIEW } from './engine.js?v=4.1';
+import { createFeedbackGate } from './feedback.js?v=4.1';
+import { migrateSettings, videoConstraints, qualityReport, emptyClip, rateFromStamps } from './settings.js?v=4.1';
+import { sanitizeRoutine, moveItem, afterSet, summarize } from './routine.js?v=4.1';
 
-export const APP_VERSION = '4.0';
+export const APP_VERSION = '4.1';
 const BAD_CUES = new Set(FAULTS);
 if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => {
-  if (j.v && j.v !== APP_VERSION) { const k = 'cf_reload_' + j.v; if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, '1'); location.replace(location.pathname + '?v=' + j.v + '&t=' + Date.now()); } }
+  if (!j.v || j.v === APP_VERSION) return;
+  const url = new URL(location.href);
+  if (url.searchParams.get('v') === j.v) return;
+  url.searchParams.set('v', j.v);
+  url.searchParams.set('t', String(Date.now()));
+  location.replace(url.pathname + url.search);
 }).catch(() => {});
 
 const T = {
@@ -23,7 +28,7 @@ const T = {
     history:'История', noHist:'Пока пусто — закончи первую тренировку', chart:'Прогресс', clearHist:'Очистить историю',
     sets:'Подходы', rest:'Отдых', restNow:'ОТДЫХ', nextSet:'Следующий подход', setOf:(a,b)=>`Подход ${a} из ${b}`, setDone:'Подход завершён',
     exOf:(a,b)=>`Упражнение ${a} из ${b}`, nextEx:'Дальше', exercises:'упражнений', setup:'Подготовка',
-    build:'Собрать тренировку', buildTitle:'Тренировка', buildSub:'Порядок, подходы, повторы или секунды, отдых. Хранится на телефоне.',
+    build:'Собрать тренировку', buildLead:'Несколько упражнений по порядку', buildTitle:'Тренировка', buildSub:'Порядок, подходы, повторы или секунды, отдых. Хранится на телефоне.',
     addEx:'Добавить', startRoutine:'Начать тренировку', emptyRoutine:'Добавь хотя бы одно упражнение.', up:'Выше', down:'Ниже', remove:'Убрать',
     repsShort:'Повторы', secShort:'Секунды', restShort:'Отдых',
     exitQ:'Выйти?', exitSub:'Сделанное сохранится', exitStay:'Остаться', exitLeave:'Выйти',
@@ -73,7 +78,7 @@ const T = {
     history:'History', noHist:'Empty so far — finish your first workout', chart:'Progress', clearHist:'Clear history',
     sets:'Sets', rest:'Rest', restNow:'REST', nextSet:'Next set', setOf:(a,b)=>`Set ${a} of ${b}`, setDone:'Set complete',
     exOf:(a,b)=>`Exercise ${a} of ${b}`, nextEx:'Next', exercises:'exercises', setup:'Setup',
-    build:'Build routine', buildTitle:'Routine', buildSub:'Order, sets, reps or seconds, rest. Stored on this phone.',
+    build:'Build a workout', buildLead:'Several exercises, in order', buildTitle:'Workout', buildSub:'Order, sets, reps or seconds, rest. Stored on this phone.',
     addEx:'Add', startRoutine:'Start routine', emptyRoutine:'Add at least one exercise.', up:'Up', down:'Down', remove:'Remove',
     repsShort:'Reps', secShort:'Seconds', restShort:'Rest',
     exitQ:'Exit?', exitSub:'What you already did will be saved', exitStay:'Stay', exitLeave:'Exit',
@@ -156,7 +161,6 @@ function applyLang() {
   $('quitBtn').setAttribute('aria-label', t().close);
   $('setBtn').setAttribute('aria-label', t().settings);
   $('histBtn').setAttribute('aria-label', t().history);
-  $('buildBtn').setAttribute('aria-label', t().buildTitle);
   $('buildBack').setAttribute('aria-label', t().back);
   $('strictNote').textContent = t().strictNote;
   $('camNote').textContent = t().camNote;
@@ -302,7 +306,7 @@ function startWorker(model) {
   return new Promise((resolve, reject) => {
     if (poseWorker) { try { poseWorker.terminate(); } catch {} poseWorker = null; }
     poseReady = false;
-    const w = new Worker(new URL('./pose-worker.js?v=4.0', import.meta.url), { type: 'module' });
+    const w = new Worker(new URL('./pose-worker.js?v=4.1', import.meta.url), { type: 'module' });
     poseWorker = w;
     const to = setTimeout(() => { try { w.terminate(); } catch {} reject(new Error('pose worker timeout')); }, 12000);
     w.onmessage = (e) => {
@@ -374,26 +378,22 @@ function setupSvg(ex) {
     const p1 = p(a1), p2 = p(a2);
     return `M${cam[0]} ${cam[1]} L${p1[0].toFixed(1)} ${p1[1].toFixed(1)} A${R} ${R} 0 0 1 ${p2[0].toFixed(1)} ${p2[1].toFixed(1)} Z`;
   };
-  return `<svg viewBox="0 0 340 228" class="tipsvg" role="img" aria-label="${L.topDown}: ${label}" data-view="${view}">
-    <text x="14" y="20" fill="rgba(244,244,238,.62)" font-size="10" font-weight="800" letter-spacing="1.3" font-family="Montserrat">${L.topDown}</text>
-    <text x="326" y="20" text-anchor="end" fill="#C6FF00" font-size="11" font-weight="800" font-family="Montserrat">${label}</text>
-    <circle cx="188" cy="124" r="58" fill="none" stroke="rgba(244,244,238,.12)" stroke-dasharray="3 5"/>
-    <path d="${wedge(0.42)}" fill="rgba(198,255,0,.16)" stroke="rgba(198,255,0,.85)" stroke-width="1.4"/>
+  return `<svg viewBox="0 0 340 210" class="tipsvg" role="img" aria-label="${L.topDown}: ${label}" data-view="${view}">
+    <text x="16" y="22" fill="rgba(244,244,238,.45)" font-size="10" font-weight="700" letter-spacing="1.6" font-family="Montserrat">${L.topDown}</text>
+    <text x="324" y="22" text-anchor="end" fill="#C6FF00" font-size="12" font-weight="800" font-family="Montserrat">${label}</text>
+    <path d="${wedge(0.22)}" fill="rgba(198,255,0,.14)" stroke="none"/>
     <g aria-label="${L.phoneLabel}" transform="translate(${cam[0]} ${cam[1]})">
-      <rect x="-12" y="-18" width="24" height="36" rx="4" fill="#0E100E" stroke="#C6FF00" stroke-width="2"/>
-      <circle cx="0" cy="10" r="1.7" fill="#C6FF00"/>
-      <circle cx="0" cy="-9" r="2.6" fill="none" stroke="#C6FF00" stroke-width="1.5"/>
+      <rect x="-9" y="-16" width="18" height="32" rx="4" fill="#0E100E" stroke="#C6FF00" stroke-width="1.6"/>
+      <circle cx="0" cy="-8" r="2.2" fill="none" stroke="#C6FF00" stroke-width="1.4"/>
     </g>
-    <g aria-label="${L.facingLabel}">
-      <rect x="176" y="112" width="24" height="40" rx="12" fill="#0E100E" stroke="#F4F4EE" stroke-width="2.5"/>
-      <line x1="164" y1="112" x2="212" y2="112" stroke="${side ? '#C6FF00' : '#F4F4EE'}" stroke-width="4" stroke-linecap="round"/>
-      <circle cx="188" cy="96" r="15" fill="#0E100E" stroke="${face ? '#C6FF00' : '#F4F4EE'}" stroke-width="2.5"/>
-      <circle cx="183" cy="95" r="1.5" fill="#F4F4EE"/><circle cx="193" cy="95" r="1.5" fill="#F4F4EE"/>
-      <path d="M188 84 v-14" stroke="#C6FF00" stroke-width="2" stroke-linecap="round"/>
-      <path d="M183 74 h10 l-5 -7 z" fill="#C6FF00"/>
+    <g aria-label="${L.facingLabel}" transform="translate(188 108)">
+      <rect x="-11" y="2" width="22" height="36" rx="11" fill="#0E100E" stroke="#F4F4EE" stroke-width="2"/>
+      <line x1="-22" y1="6" x2="22" y2="6" stroke="${side ? '#C6FF00' : 'rgba(244,244,238,.8)'}" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="0" cy="-16" r="13" fill="#0E100E" stroke="${face ? '#C6FF00' : '#F4F4EE'}" stroke-width="2"/>
+      <circle cx="-4" cy="-17" r="1.3" fill="#F4F4EE"/><circle cx="4" cy="-17" r="1.3" fill="#F4F4EE"/>
     </g>
-    <text x="170" y="186" text-anchor="middle" fill="#C6FF00" font-size="13" font-weight="800" font-family="Manrope">${hit}</text>
-    <text x="170" y="206" text-anchor="middle" fill="rgba(244,244,238,.72)" font-size="11" font-weight="700" font-family="Manrope">${L.phoneLabel} · ${heightLabel} · ${m}</text>
+    <text x="170" y="176" text-anchor="middle" fill="#C6FF00" font-size="14" font-weight="700" font-family="Manrope">${hit}</text>
+    <text x="170" y="196" text-anchor="middle" fill="rgba(244,244,238,.55)" font-size="11" font-weight="600" font-family="Manrope">${heightLabel} · ${m}</text>
   </svg>`;
 }
 function showTip(ex) {
@@ -411,11 +411,10 @@ function showQuality(q) {
   lastQuality = q || null;
   const asked = `${q?.askedRes || cfg.camRes}p/${q?.askedFps || cfg.camFps}`;
   const got = q?.label || '—';
-  const text = `${t().qAsk} ${asked} → ${got}` + (q?.fallback ? ' · ' + t().qFallback : '');
+  $('qNow').textContent = `${t().qAsk} ${asked} → ${got}` + (q?.fallback ? ' · ' + t().qFallback : '');
   const el = $('qChip');
-  el.textContent = q?.label ? text : '';
+  el.textContent = q?.label || '';
   el.classList.toggle('fb', !!q?.fallback);
-  $('qNow').textContent = text;
 }
 async function openCamera() {
   const video = videoConstraints({ front: cfg.front, res: cfg.camRes, fps: cfg.camFps });
@@ -1211,7 +1210,6 @@ $('rMinus').onclick = () => stepRest(-1); $('rPlus').onclick = () => stepRest(1)
 $('startBtn').onclick = () => beginSession('single');
 $('againBtn').onclick = () => { if (lastMode === 'routine' && routine.items.length) beginSession('routine'); else beginSession('single'); };
 $('homeBtn').onclick = () => { SESS = null; disarmBackGuard(); applyLang(); show('home'); };
-$('buildBtn').onclick = () => { renderBuilder(); show('build'); };
 $('buildOpen').onclick = () => { renderBuilder(); show('build'); };
 $('buildBack').onclick = () => show('home');
 $('addEx').onclick = () => {
