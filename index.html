@@ -9,36 +9,56 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%23060706%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%227%22 fill=%22%23C6FF00%22/%3E%3C/svg%3E">
-<title>Calisthenics Flow · AI Coach</title>
+<title>Calisthenics Flow · Your pocket trainer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.5">
+<link rel="stylesheet" href="style.css?v=4.0">
 </head>
 <body>
 <!-- HOME -->
 <section id="home" class="screen active">
   <header class="top">
     <div class="brand"><span class="dot"></span>CALISTHENICS FLOW</div>
-    <div class="tbtns"><button id="histBtn" class="ibtn sm" aria-label="history"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M11 20V4M18 20v-7"/></svg></button><button id="langBtn" class="langbtn" aria-label="language"><b data-l="ru">RU</b><b data-l="en">EN</b></button><button id="setBtn" class="ibtn sm" aria-label="settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button></div>
+    <div class="tbtns">
+      <button type="button" id="histBtn" class="ibtn sm" aria-label="History"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M11 20V4M18 20v-7"/></svg></button>
+      <button type="button" id="buildBtn" class="ibtn sm" aria-label="Routine"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 7h12M8 12h12M8 17h12"/><path d="M4 7h.01M4 12h.01M4 17h.01"/></svg></button>
+      <button type="button" id="setBtn" class="ibtn sm" aria-label="Settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    </div>
   </header>
-  <h1 data-i="title">AI-тренер</h1>
+  <h1 data-i="title">Your pocket trainer</h1>
   <p class="sub" data-i="subtitle">Считает только чистые повторы. Видео не покидает телефон.</p>
   <div id="exList" class="exlist"></div>
   <div class="row target">
     <span data-i="target">Цель</span>
-    <div class="stepper"><button id="tMinus">−</button><b id="tVal">20</b><button id="tPlus">+</button><span id="tUnit" class="unit"></span></div>
+    <div class="stepper"><button type="button" id="tMinus">−</button><b id="tVal">20</b><button type="button" id="tPlus">+</button><span id="tUnit" class="unit"></span></div>
   </div>
   <div class="row target"><span data-i="sets">Подходы</span>
-    <div class="stepper"><button id="sMinus">−</button><b id="sVal">1</b><button id="sPlus">+</button></div></div>
+    <div class="stepper"><button type="button" id="sMinus">−</button><b id="sVal">1</b><button type="button" id="sPlus">+</button></div></div>
   <div class="row target"><span data-i="rest">Отдых</span>
-    <div class="stepper"><button id="rMinus">−</button><b id="rVal">60</b><button id="rPlus">+</button></div></div>
-  <div class="row toggles">
-    <button id="voiceBtn" class="chip on" data-i="voice">Голос</button>
-    <button id="camBtn" class="chip" data-i="camFront">Фронтальная камера</button>
-  </div>
-  <button id="startBtn" class="cta" data-i="start">Начать</button>
+    <div class="stepper"><button type="button" id="rMinus">−</button><b id="rVal">60</b><button type="button" id="rPlus">+</button></div></div>
+  <button type="button" id="startBtn" class="cta" data-i="start">Начать</button>
+  <button type="button" id="buildOpen" class="ghost wide buildopen" data-i="build">Собрать тренировку</button>
   <p class="streak" id="homeStreak"></p>
-  <p class="foot">@calistenics_flow · Yuri Zubarev · <span class="ver">v3.5</span></p>
+  <p class="foot">@calistenics_flow · Yuri Zubarev · <span class="ver">v4.0</span></p>
+</section>
+
+<!-- BUILDER -->
+<section id="build" class="screen">
+  <header class="top">
+    <button type="button" id="buildBack" class="ibtn sm" aria-label="Back">←</button>
+    <div class="brand"><span class="dot"></span>CALISTHENICS FLOW</div>
+    <span class="ibtn sm" style="visibility:hidden"></span>
+  </header>
+  <h1 data-i="buildTitle">Тренировка</h1>
+  <p class="sub" data-i="buildSub">Порядок, подходы, повторы или секунды, отдых. Хранится на телефоне.</p>
+  <div id="buildList" class="buildlist"></div>
+  <div class="row addrow">
+    <label class="sr" for="addPick" data-i="addEx">Добавить</label>
+    <select id="addPick"></select>
+    <button type="button" id="addEx" class="chip" data-i="addEx">Добавить</button>
+  </div>
+  <p id="buildEmpty" class="dim"></p>
+  <button type="button" id="startRoutine" class="cta" data-i="startRoutine">Начать тренировку</button>
 </section>
 
 <!-- WORKOUT -->
@@ -46,17 +66,26 @@
   <canvas id="cv"></canvas>
   <video id="vid" playsinline muted autoplay></video>
   <div class="hud">
-    <div class="counter"><div id="cNum">0</div><div id="cOf" class="of"></div></div>
-    <div id="plus" class="plus">+1</div>
+    <button type="button" id="quitBtn" class="ibtn" aria-label="Close">✕</button>
+    <div class="hudmid">
+      <div id="camSeg" class="camseg" role="group" aria-label="Camera">
+        <button type="button" id="camRear" aria-pressed="true">Rear</button>
+        <button type="button" id="camFront" aria-pressed="false">Front</button>
+      </div>
+      <div id="qChip" class="qchip"></div>
+      <div id="recInd" class="recind" role="status"><i></i>REC <span id="recTime">0:00</span></div>
+    </div>
     <div class="side">
-      <button id="muteBtn" class="ibtn" aria-label="voice">🔊</button>
-      <button id="recBtn" class="ibtn recb" aria-label="record">●</button>
-      <button id="quitBtn" class="ibtn" aria-label="close">✕</button>
+      <button type="button" id="recBtn" class="ibtn recb" aria-pressed="false" aria-label="Record">
+        <svg class="ic-rec" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor"/></svg>
+        <svg class="ic-stop" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor"/></svg>
+      </button>
+      <button type="button" id="muteBtn" class="ibtn" aria-pressed="true" aria-label="Sound on">
+        <svg class="ic-on" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 10h3l4-3v10l-4-3H4z"/><path d="M15 9.5a3.5 3.5 0 010 5"/><path d="M17.5 7a6.5 6.5 0 010 10"/></svg>
+        <svg class="ic-off" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 10h3l4-3v10l-4-3H4z"/><path d="M16 10l5 5M21 10l-5 5"/></svg>
+      </button>
     </div>
   </div>
-  <div id="setChip" class="setchip"></div>
-  <div id="recInd" class="recind"><i></i>REC <span id="recTime"></span></div>
-  <div id="viewChip" class="vchip"></div>
   <pre id="dbgOut" class="dbg"></pre>
   <div id="calib" class="calib">
     <div class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" class="bg"/><circle id="ringFg" cx="20" cy="20" r="17" class="fg"/></svg></div>
@@ -64,10 +93,20 @@
     <p id="hint" class="hint"></p>
   </div>
   <div id="big" class="big"></div>
+  <div id="plus" class="plus">+1</div>
   <div class="bottom">
-    <div id="cue" class="cue"></div>
-    <div id="dots" class="dots"></div>
-    <div class="barrow"><div class="bar"><i id="barFill"></i></div><button id="finishBtn" class="chip" data-i="finish">Завершить</button></div>
+    <div id="cue" class="cue" role="status"></div>
+    <div class="statpanel">
+      <div class="stathead">
+        <div>
+          <div id="statEx" class="statex"></div>
+          <div id="statSet" class="statset"></div>
+        </div>
+        <div class="statnum"><b id="cNum">0</b><span id="cOf" class="of"></span></div>
+      </div>
+      <div id="dots" class="dots"></div>
+      <div class="barrow"><div class="bar"><i id="barFill"></i></div><button type="button" id="finishBtn" class="chip" data-i="finish">Завершить</button></div>
+    </div>
   </div>
   <div id="loading" class="loading"><div class="spin"></div><p data-i="loading">Загружаю модель…</p></div>
 </section>
@@ -84,58 +123,84 @@
   </div>
   <div id="sDots" class="dots lg"></div>
   <p class="legend"><i class="g"></i><span data-i="clean">чисто</span> <i class="r"></i><span data-i="error">ошибка</span></p>
-  <button id="shareBtn" class="cta" data-i="share">Поделиться</button>
+  <button type="button" id="shareBtn" class="cta" data-i="share">Поделиться</button>
   <div id="sSets" class="sets"></div>
-  <div class="row two"><button id="storyBtn" class="ghost" data-i="story">Картинка для сторис</button><button id="recSave" class="ghost" data-i="recSave">Сохранить видео</button></div>
-  <div class="row two"><button id="againBtn" class="ghost" data-i="again">Ещё раз</button><button id="homeBtn" class="ghost" data-i="home">На главную</button></div>
-  <button id="histSum" class="linkbtn" data-i="history">История</button>
+  <div class="row two"><button type="button" id="storyBtn" class="ghost" data-i="story">Картинка для сторис</button><button type="button" id="recSave" class="ghost" data-i="recSave">Сохранить видео</button></div>
+  <div class="row two"><button type="button" id="againBtn" class="ghost" data-i="again">Ещё раз</button><button type="button" id="homeBtn" class="ghost" data-i="home">На главную</button></div>
+  <button type="button" id="histSum" class="linkbtn" data-i="history">История</button>
 </section>
+
 <div id="tip" class="sheet tip"><div class="panel">
   <div class="grab"></div>
-  <div class="tiphead"><h2 id="tipTitle"></h2><button id="tipX" class="ibtn sm" aria-label="close">✕</button></div>
+  <div class="tiphead"><h2 id="tipTitle"></h2><button type="button" id="tipX" class="ibtn sm" aria-label="Close">✕</button></div>
   <div id="tipBody"></div>
-  <button id="tipGo" class="cta"></button>
+  <button type="button" id="tipGo" class="cta"></button>
 </div></div>
+
 <div id="rest" class="overlay"><div class="obox">
   <p class="eyebrow" data-i="restNow">ОТДЫХ</p><div id="restNum" class="restnum">60</div>
   <p id="restSet" class="dim"></p><p id="restNext" class="restnext"></p>
-  <button id="restSkip" class="cta" data-i="restSkip">Дальше</button>
-  <button id="restQuit" class="ghost wide" data-i="finish">Завершить</button>
+  <button type="button" id="restSkip" class="cta" data-i="restSkip">Дальше</button>
+  <button type="button" id="restQuit" class="ghost wide" data-i="finish">Завершить</button>
 </div></div>
+
 <div id="pause" class="overlay"><div class="obox">
   <h2 id="pauseQ">Выйти?</h2><p id="pauseSub" class="dim"></p>
-  <div class="row two"><button id="pauseStay" class="cta sm">Остаться</button><button id="pauseGo" class="ghost">Выйти</button></div>
+  <div class="row two"><button type="button" id="pauseStay" class="cta sm">Остаться</button><button type="button" id="pauseGo" class="ghost">Выйти</button></div>
 </div></div>
+
+<div id="saveDlg" class="overlay"><div class="obox savebox">
+  <p class="eyebrow" id="saveEyebrow">REC</p>
+  <video id="saveVid" playsinline controls></video>
+  <p id="saveMeta" class="dim"></p>
+  <p id="saveNote" class="dim"></p>
+  <button type="button" id="saveShare" class="cta" data-i="saveShare">Поделиться</button>
+  <button type="button" id="saveDown" class="ghost wide" data-i="saveDown">Скачать</button>
+  <button type="button" id="savePrev" class="ghost wide" hidden data-i="savePrev">Предыдущая запись</button>
+  <button type="button" id="saveClose" class="ghost wide" data-i="close">Готово</button>
+</div></div>
+
 <div id="toast" class="toast"></div>
+
 <div id="sheetHist" class="sheet"><div class="panel">
   <div class="grab"></div>
-  <div class="tiphead"><h2 data-i="history">История</h2><button id="histClose" class="ibtn sm">✕</button></div>
-  <label><span data-i="chart">Прогресс</span> · <span id="histEx"></span></label>
-  <div id="histChart"></div><div id="histList" class="histlist"></div>
-  <div class="row2"><button id="histClear" class="chip" data-i="clearHist">Очистить историю</button></div>
+  <div class="tiphead"><h2 data-i="history">История</h2><button type="button" id="histClose" class="ibtn sm" aria-label="Close">✕</button></div>
+  <div class="sheetbody" id="histBody">
+    <label><span data-i="chart">Прогресс</span> · <span id="histEx"></span></label>
+    <div id="histChart"></div><div id="histList" class="histlist"></div>
+  </div>
+  <div class="row2 sheetfoot"><button type="button" id="histClear" class="chip" data-i="clearHist">Очистить историю</button></div>
 </div></div>
+
 <div id="sheet" class="sheet"><div class="panel">
   <div class="grab"></div>
   <h2 data-i="settings">Настройки</h2>
-  <label data-i="language">Язык</label>
-  <div class="seg"><button data-set="lang:ru">Русский</button><button data-set="lang:en">English</button></div>
-  <label data-i="voiceRu">Голос (русский)</label>
-  <div class="seg"><button data-set="ru:m" data-i="male">Мужской</button><button data-set="ru:f" data-i="female">Женский</button></div>
-  <label data-i="voiceEn">Голос (английский)</label>
-  <div class="seg"><button data-set="en:m" data-i="male">Мужской</button><button data-set="en:f" data-i="female">Женский</button></div>
-  <label data-i="voiceOn">Голосовые подсказки</label>
-  <div class="seg"><button data-set="voice:true">ON</button><button data-set="voice:false">OFF</button></div>
-  <label data-i="model">Модель позы</label>
-  <div class="seg"><button data-set="model:lite" data-i="mLite">Быстрая</button><button data-set="model:full" data-i="mFull">Стандарт</button><button data-set="model:heavy" data-i="mHeavy">Макс</button></div>
-  <p class="verline" id="modelNote">lite 5,8 MB · full 9,4 MB · heavy 30,7 MB</p>
-  <label data-i="level">Уровень</label>
-  <div class="seg"><button data-set="level:easy" data-i="lvEasy">Легко</button><button data-set="level:std" data-i="lvStd">Норма</button><button data-set="level:hard" data-i="lvHard">Жёстко</button></div>
-  <p class="verline" id="levelNote"></p>
-  <label data-i="debug">Отладка (углы на экране)</label>
-  <div class="seg"><button data-set="debug:true">ON</button><button data-set="debug:false">OFF</button></div>
-  <p class="verline"><span data-i="version">Версия</span> v3.5</p>
-  <div class="row2"><button id="previewBtn" class="chip" data-i="preview">Прослушать</button><button id="sheetClose" class="cta sm" data-i="close">Готово</button></div>
+  <div class="sheetbody" id="sheetBody">
+    <label data-i="language">Язык</label>
+    <div class="seg"><button type="button" data-set="lang:ru">Русский</button><button type="button" data-set="lang:en">English</button></div>
+    <label data-i="voiceOne">Голос</label>
+    <div class="seg"><button type="button" data-set="gender:m" data-i="male">Мужской</button><button type="button" data-set="gender:f" data-i="female">Женский</button></div>
+    <p class="verline" data-i="voiceNote">Один выбор для русского и английского.</p>
+    <label data-i="voiceOn">Голосовые подсказки</label>
+    <div class="seg"><button type="button" data-set="voice:true">ON</button><button type="button" data-set="voice:false">OFF</button></div>
+    <label data-i="model">Модель позы</label>
+    <div class="seg"><button type="button" data-set="model:lite" data-i="mLite">Быстрая</button><button type="button" data-set="model:full" data-i="mFull">Стандарт</button><button type="button" data-set="model:heavy" data-i="mHeavy">Макс</button></div>
+    <p class="verline" id="modelNote">lite 5,8 MB · full 9,4 MB · heavy 30,7 MB</p>
+    <label data-i="camRes">Разрешение</label>
+    <div class="seg"><button type="button" data-set="res:720">720p</button><button type="button" data-set="res:1080">1080p</button></div>
+    <label data-i="camFps">Кадры</label>
+    <div class="seg"><button type="button" data-set="fps:30">30</button><button type="button" data-set="fps:60">60</button></div>
+    <p class="verline" id="camNote"></p>
+    <p class="verline" id="qNow"></p>
+    <label data-i="overlay">Картинка записи</label>
+    <div class="seg"><button type="button" data-set="overlay:true" data-i="overlayOn">С линиями</button><button type="button" data-set="overlay:false" data-i="overlayOff">Только камера</button></div>
+    <p class="verline" id="strictNote"></p>
+    <label data-i="debug">Отладка (углы на экране)</label>
+    <div class="seg"><button type="button" data-set="debug:true">ON</button><button type="button" data-set="debug:false">OFF</button></div>
+    <p class="verline"><span data-i="version">Версия</span> v4.0</p>
+  </div>
+  <div class="row2 sheetfoot"><button type="button" id="previewBtn" class="chip" data-i="preview">Прослушать</button><button type="button" id="sheetClose" class="cta sm" data-i="close">Готово</button></div>
 </div></div>
-<script type="module" src="app.js?v=3.5"></script>
+<script type="module" src="app.js?v=4.0"></script>
 </body>
 </html>
