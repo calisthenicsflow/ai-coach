@@ -52,7 +52,7 @@ const T = {
     camRear:'Основная', camFront:'Фронт', camera:'Камера', soundOn:'Звук включён', soundOff:'Звук выключен',
     camRes:'Разрешение', camFps:'Кадры в секунду',
     camNote:'Браузер не забирает настройки приложения «Камера». Здесь запрос 720p или 1080p и 30 или 60 кадров. Ниже — что реально открылось. Если режима нет, будет ближайший.',
-    qFallback:'это ближайший доступный режим, не запрошенный',
+    qAsk:'запрос', qFallback:'это ближайший доступный режим, не запрошенный',
     overlay:'Картинка записи', overlayOn:'С линиями', overlayOff:'Только камера',
     strictNote:'Техника всегда строгая: небольшой допуск на шум камеры и на угол. Небольшое отклонение L-sit от горизонта ещё считается, большое — нет. Это не идеальное распознавание.',
     saveShare:'Поделиться', saveDown:'Скачать', savePrev:'Другая запись', saveTitle:'Запись',
@@ -102,7 +102,7 @@ const T = {
     camRear:'Rear', camFront:'Front', camera:'Camera', soundOn:'Sound on', soundOff:'Sound off',
     camRes:'Resolution', camFps:'Frame rate',
     camNote:'The browser cannot inherit the phone Camera app\'s settings. This asks for 720p or 1080p and 30 or 60 fps. The line below is the mode that actually opened. If that mode is missing, the closest one is used.',
-    qFallback:'closest available, not the mode asked for',
+    qAsk:'asked', qFallback:'closest available, not the mode asked for',
     overlay:'Recording picture', overlayOn:'With lines', overlayOff:'Camera only',
     strictNote:'Technique is always strict, with a small tolerance for camera noise and angle. A slight L-sit tilt off horizontal still counts; a large one does not. Detection is not perfect.',
     saveShare:'Share', saveDown:'Download', savePrev:'Other recording', saveTitle:'Recording',
@@ -161,7 +161,7 @@ function applyLang() {
   $('strictNote').textContent = t().strictNote;
   $('camNote').textContent = t().camNote;
   syncSound(); syncRec(); renderEx(); renderTarget(); renderStreak(); renderBuilder();
-  if (lastQuality) showQuality(lastQuality);
+  showQuality(lastQuality);
 }
 function renderEx() {
   $('exList').innerHTML = EX_ORDER.map(k => `<button type="button" class="ex ${k===cfg.ex?'sel':''}" data-k="${k}"><b>${t().ex[k][0]}</b><span>${t().exSub[k]}</span></button>`).join('');
@@ -408,11 +408,14 @@ function showTip(ex) {
 }
 
 function showQuality(q) {
-  lastQuality = q;
+  lastQuality = q || null;
+  const asked = `${q?.askedRes || cfg.camRes}p/${q?.askedFps || cfg.camFps}`;
+  const got = q?.label || '—';
+  const text = `${t().qAsk} ${asked} → ${got}` + (q?.fallback ? ' · ' + t().qFallback : '');
   const el = $('qChip');
-  const text = q?.label ? (q.label + (q.fallback ? ' · ' + t().qFallback : '')) : '';
-  el.textContent = text; el.classList.toggle('fb', !!q?.fallback);
-  $('qNow').textContent = text || '—';
+  el.textContent = q?.label ? text : '';
+  el.classList.toggle('fb', !!q?.fallback);
+  $('qNow').textContent = text;
 }
 async function openCamera() {
   const video = videoConstraints({ front: cfg.front, res: cfg.camRes, fps: cfg.camFps });
@@ -433,6 +436,7 @@ function readQuality() {
 async function setFacing(front, force = false) {
   const nextFront = !!front;
   if (!force && cfg.front === nextFront && stream) { applyCamPressed(); return; }
+  const prevFront = cfg.front;
   cfg.front = nextFront; save(); applyCamPressed();
   if (!W && !starting) return;
   const my = startSeq;
@@ -440,9 +444,13 @@ async function setFacing(front, force = false) {
     const next = await openCamera();
     if (my !== startSeq) { next.getTracks().forEach(tr => tr.stop()); return; }
     const prev = stream; stream = next; vid.srcObject = next; await vid.play();
+    // Only the camera track changes. An in-progress recorder keeps its own canvas and audio.
     prev?.getTracks().forEach(tr => { if (tr.kind === 'video') tr.stop(); });
     readQuality();
-  } catch (e) { toast(t().recErr); }
+  } catch (e) {
+    cfg.front = prevFront; save(); applyCamPressed();
+    toast(t().recErr);
+  }
 }
 function applyCamPressed() {
   $('camRear').setAttribute('aria-pressed', cfg.front ? 'false' : 'true');
@@ -971,10 +979,14 @@ async function share() {
 // Pose runs beside that, on a worker when the browser allows it.
 let rec = null, recStarting = false, clips = [], saveIndex = 0, saveResume = false, micStream = null, micNode = null;
 const recSupported = () => typeof MediaRecorder === 'function' && typeof recCv.captureStream === 'function';
+function isSafari() {
+  const ua = navigator.userAgent || '';
+  if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return true;
+  return /Safari\//.test(ua) && !/Chrome|Chromium|Edg|OPR|Android/.test(ua);
+}
 function recMime() {
   if (!recSupported()) return null;
-  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent || '');
-  const list = ios
+  const list = isSafari()
     ? ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm']
     : ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
   return list.find(m => { try { return MediaRecorder.isTypeSupported(m); } catch { return false; } }) || '';
@@ -1009,18 +1021,28 @@ async function toggleRec() {
   const mime = recMime();
   if (!mime) { recStarting = false; toast(t().recUnsup); return; }
   const vw = vid.videoWidth || 1280, vh = vid.videoHeight || 720;
+  if (recCv && recCv.parentNode) recCv.parentNode.removeChild(recCv);
   recCv = document.createElement('canvas');
-  rctx = recCv.getContext('2d', { alpha: false });
   recCv.width = vw; recCv.height = vh;
+  recCv.setAttribute('aria-hidden', 'true');
+  // Safari does not capture a canvas that is outside the document.
+  recCv.style.cssText = 'position:fixed;left:0;top:0;width:8px;height:8px;opacity:0.02;pointer-events:none;z-index:-1';
+  document.body.appendChild(recCv);
+  rctx = recCv.getContext('2d', { alpha: false });
   let mic = 'failed';
   try { await addMic(); mic = 'on'; } catch (e) { mic = (e.name === 'NotAllowedError' || e.name === 'SecurityError') ? 'denied' : 'failed'; }
   try {
-    const canvasStream = recCv.captureStream(30);
+    let canvasStream;
+    try { canvasStream = recCv.captureStream(30); } catch { canvasStream = recCv.captureStream(); }
     const canvasTrack = canvasStream.getVideoTracks()[0];
     const tracks = [canvasTrack];
     // A silent Web Audio track with no microphone makes Chrome write a 0-byte file.
-    // Without a mic, keep the video and leave cues on the speaker.
-    const audio = mic === 'on' ? freshCueTrack() : null;
+    // Safari records the microphone track itself; it often drops an AudioContext mix.
+    let audio = null;
+    if (mic === 'on') {
+      const micLive = micStream?.getAudioTracks().find(t => t.readyState === 'live');
+      audio = isSafari() && micLive ? micLive : freshCueTrack();
+    }
     if (audio && audio.readyState === 'live') tracks.push(audio);
     const mixed = new MediaStream(tracks);
     const mr = new MediaRecorder(mixed, { mimeType: mime, videoBitsPerSecond: (Math.min(vw, vh) >= 1000 ? 8_000_000 : 5_000_000), audioBitsPerSecond: 128000 });

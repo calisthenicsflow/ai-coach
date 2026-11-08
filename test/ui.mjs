@@ -133,7 +133,19 @@ try {
   await page.click('#setBtn');
   await page.waitForSelector('#sheet.show');
   await delay(400);
-  await shot('settings-320x568');
+  await shot('settings-ru-320x568');
+  await page.click('[data-set="res:1080"]');
+  await page.click('[data-set="fps:60"]');
+  await page.evaluate(() => document.querySelector('[data-set="res:1080"]').scrollIntoView({ block: 'center' }));
+  await delay(200);
+  await shot('settings-ru-quality');
+  const asked = await page.evaluate(() => ({
+    res: document.querySelector('[data-set="res:1080"]').classList.contains('sel'),
+    fps: document.querySelector('[data-set="fps:60"]').classList.contains('sel'),
+    line: document.getElementById('qNow').textContent,
+  }));
+  if (!asked.res || !asked.fps || !/1080p\/60/.test(asked.line)) fail('quality-request', asked);
+  else ok('quality-request', asked);
   const scroll = await page.evaluate(() => {
     const body = document.getElementById('sheetBody');
     const close = document.getElementById('sheetClose');
@@ -179,6 +191,17 @@ try {
   else ok('lang-en', { genders: en.genders, strict: en.strict.slice(0, 48) });
   if (!/not perfect/i.test(en.strict)) fail('strict-copy', en.strict);
   else ok('strict-copy');
+  const names = await page.evaluate(() => {
+    const read = () => [...document.querySelectorAll('#exList .ex b')].map(b => b.textContent.trim());
+    const enNames = read();
+    document.querySelector('[data-set="lang:ru"]').click();
+    const ruNames = read();
+    document.querySelector('[data-set="lang:en"]').click();
+    return { enNames, ruNames };
+  });
+  const unique = (a) => new Set(a).size === 17 && a.every(x => x && x.length > 1);
+  if (!unique(names.enNames) || !unique(names.ruNames)) fail('exercises-17', names);
+  else ok('exercises-17', { en: names.enNames.length, ru: names.ruNames.length });
   await page.click('#sheetClose');
 
   await page.evaluate(() => localStorage.setItem('cf_settings', JSON.stringify({ lang:'en', voices:{ ru:'m', en:'f' }, level:'easy', ex:'lunge', voice:true })));
@@ -214,6 +237,7 @@ try {
   else ok('builder-persist', kept);
 
   await vp(390, 844);
+  await page.evaluate(() => { window.__CF.cfg.camRes = '1080'; window.__CF.cfg.camFps = 60; });
   await page.evaluate(() => document.getElementById('buildOpen').scrollIntoView({ block: 'center' }));
   await page.click('#buildOpen');
   await page.click('#startRoutine');
@@ -231,6 +255,20 @@ try {
   await page.waitForSelector('#calib.show', { timeout: 12000 });
   await delay(300);
   await shot('workout-calib');
+  await page.waitForFunction(() => window.__CF.debug.phase === 'active', { timeout: 8000 });
+  await delay(250);
+  await shot('workout-active');
+  const active = await page.evaluate(() => ({
+    phase: window.__CF.debug.phase,
+    calib: document.getElementById('calib').classList.contains('show'),
+    num: document.getElementById('cNum').textContent,
+    chip: document.getElementById('qChip').textContent,
+    ex: document.getElementById('statEx').textContent,
+  }));
+  if (active.phase !== 'active' || active.calib) fail('active', active);
+  else ok('active', active);
+  if (!/1080p\/60/.test(active.chip) || !/1280×720/.test(active.chip) || !/30 fps/.test(active.chip)) fail('quality-actual', active);
+  else ok('quality-actual', active.chip);
   const hud = await page.evaluate(() => {
     const box = el => { const r = el.getBoundingClientRect(); return { top:r.top, right:r.right, bottom:r.bottom, left:r.left, w:r.width, h:r.height }; };
     const rec = box(document.getElementById('recBtn'));
@@ -352,6 +390,18 @@ try {
   if (!/squat|присед/i.test(nextTip)) fail('next-setup', nextTip);
   else ok('next-setup', nextTip);
   await shot('setup-next');
+  await page.click('#tipGo');
+  await page.waitForFunction(() => window.__CF.completeSetForTest(), { timeout: 8000 });
+  await page.waitForSelector('#rest.show', { timeout: 5000 });
+  await page.click('#restSkip');
+  await page.waitForSelector('#tip.show');
+  await page.click('#tipGo');
+  await page.waitForFunction(() => window.__CF.completeSetForTest(), { timeout: 8000 });
+  await page.waitForSelector('#sum.active', { timeout: 8000 });
+  await shot('summary-routine');
+  const hist = await page.evaluate(() => JSON.parse(localStorage.cf_history || '[]').map(x => x.ex));
+  if (hist.join() !== 'pushup,squat,plank') fail('history', hist);
+  else ok('history', hist);
 } catch (e) {
   console.error('UNCAUGHT', e);
   try { await shot('failure'); } catch {}

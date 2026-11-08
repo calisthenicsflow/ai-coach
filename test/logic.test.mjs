@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { migrateSettings, videoConstraints, qualityReport, emptyClip, rateFromStamps } from '../settings.js';
+import { migrateSettings, videoConstraints, qualityReport, emptyClip, rateFromStamps, EX_IDS } from '../settings.js';
 import { sanitizeRoutine, moveItem, afterSet, summarize } from '../routine.js';
 import { createFeedbackGate } from '../feedback.js';
 
@@ -21,6 +21,13 @@ test('voice and level storage migrates to one gender and no difficulty', () => {
   assert.equal(kept.camRes, '720');
   assert.equal(kept.camFps, 30);
   assert.equal(Object.keys(kept.targets).length, 17);
+});
+
+test('all 17 exercises survive settings migration', () => {
+  assert.equal(EX_IDS.length, 17);
+  const cfg = migrateSettings({});
+  assert.equal(Object.keys(cfg.targets).length, 17);
+  for (const id of EX_IDS) assert.ok(cfg.targets[id] > 0, id);
 });
 
 test('camera constraints ask for a size and do not pretend to copy the Camera app', () => {
